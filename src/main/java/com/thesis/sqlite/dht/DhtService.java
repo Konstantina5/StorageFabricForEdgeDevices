@@ -16,6 +16,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestTemplate;
 
 import com.thesis.sqlite.enumerations.EntityTypeE;
@@ -38,9 +39,9 @@ public class DhtService {
     private final Object syncLock;
 
     @Autowired
-    private DhtService(MetricRepository metricRepository, KafkaProducer kafkaProducer) {
+    private DhtService(MetricRepository metricRepository, RestTemplate restTemplate, KafkaProducer kafkaProducer) {
         this.kafkaProducer = kafkaProducer;
-        restTemplate = new RestTemplate();
+        this.restTemplate = restTemplate;
         existingNodes = ConcurrentHashMap.newKeySet();
         deleteLock = new Object();
         syncLock = new Object();

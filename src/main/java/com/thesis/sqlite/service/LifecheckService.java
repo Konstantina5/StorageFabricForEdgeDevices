@@ -1,28 +1,22 @@
 package com.thesis.sqlite.service;
 
-import java.time.Duration;
-import java.util.HashSet;
-import java.util.Set;
-
-import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.context.event.EventListener;
+import com.thesis.sqlite.dht.DhtService;
+import com.thesis.sqlite.utils.Utils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import com.thesis.sqlite.dht.DhtService;
-import com.thesis.sqlite.utils.Utils;
-
-import lombok.NoArgsConstructor;
+import java.util.HashSet;
+import java.util.Set;
 
 @Service
-@NoArgsConstructor
 public class LifecheckService {
 
-    private DhtService dhtService;
+    private final DhtService dhtService;
 
-    @EventListener(ContextRefreshedEvent.class)
-    public void init(ContextRefreshedEvent context) {
-        dhtService = context.getApplicationContext().getBean("dhtService", DhtService.class);
+    @Autowired
+    public LifecheckService(DhtService dhtService) {
+        this.dhtService = dhtService;
     }
 
     public void lifeCheck(Set<String> nodes) {

@@ -12,8 +12,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -24,21 +22,23 @@ import com.thesis.sqlite.repositories.MetricRepository;
 import com.thesis.sqlite.utils.Utils;
 
 import io.micrometer.common.lang.NonNull;
-import lombok.AllArgsConstructor;
 
 @Service
-@AllArgsConstructor
 public class MetricService {
-    private static final RestTemplate REST_TEMPLATE = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final MetricRepository metricRepository;
     private final PodService podService;
     private final ContainerService containerService;
     private final LifecheckService lifecheckService;
-    private DhtService dhtService;
+    private final DhtService dhtService;
 
-    @EventListener(ContextRefreshedEvent.class)
-    public void init(ContextRefreshedEvent context) {
-        dhtService = context.getApplicationContext().getBean("dhtService", DhtService.class);
+    public MetricService(RestTemplate restTemplate, MetricRepository metricRepository, PodService podService, ContainerService containerService, LifecheckService lifecheckService, DhtService dhtService) {
+        this.restTemplate = restTemplate;
+        this.metricRepository = metricRepository;
+        this.podService = podService;
+        this.containerService = containerService;
+        this.lifecheckService = lifecheckService;
+        this.dhtService = dhtService;
     }
 
     public MetricEntity addMetric(@NonNull MetricEntity metric) {
@@ -87,7 +87,7 @@ public class MetricService {
             // In different case send the request to fetch the data
             try {
                 final var typeRequest = type != null ? String.format("?type=%s", type) : "";
-                return REST_TEMPLATE.getForObject(
+                return restTemplate.getForObject(
                         String.format("http://%s:29000/metrics/get%s", node.get(), typeRequest),
                         List.class);
             } catch (Exception e) {
@@ -118,7 +118,7 @@ public class MetricService {
                         final var future = CompletableFuture.supplyAsync(() -> {
                             Thread.currentThread().setName(nodeName);
                             try {
-                                final List<MetricEntity> resp = REST_TEMPLATE.getForObject(
+                                final List<MetricEntity> resp = restTemplate.getForObject(
                                         String.format("http://%s:29000/metrics/get?type=%s", nodeName, type),
                                         List.class);
                                 // There is a chance that some data have been deleted from a node and this node

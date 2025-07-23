@@ -1,4 +1,4 @@
-package com.thesis.sqlite.config;
+package com.thesis.sqlite.confs;
 
 import java.util.Properties;
 
