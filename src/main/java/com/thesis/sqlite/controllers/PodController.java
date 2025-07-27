@@ -5,7 +5,7 @@ import java.util.List;
 import org.springframework.web.bind.annotation.*;
 
 import com.thesis.sqlite.entities.PodEntity;
-import com.thesis.sqlite.service.PodService;
+import com.thesis.sqlite.services.PodService;
 
 import lombok.AllArgsConstructor;
 

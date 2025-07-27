@@ -1,4 +1,4 @@
-package com.thesis.sqlite.service;
+package com.thesis.sqlite.services;
 
 import java.util.List;
 import java.util.Optional;

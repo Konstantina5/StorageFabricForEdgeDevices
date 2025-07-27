@@ -1,4 +1,4 @@
-package com.thesis.sqlite.service;
+package com.thesis.sqlite.services;
 
 import com.thesis.sqlite.dht.DhtService;
 import com.thesis.sqlite.utils.Utils;

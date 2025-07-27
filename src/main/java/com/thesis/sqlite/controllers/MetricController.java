@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.thesis.sqlite.entities.MetricEntity;
 import com.thesis.sqlite.enumerations.EntityTypeE;
-import com.thesis.sqlite.service.MetricService;
+import com.thesis.sqlite.services.MetricService;
 
 import lombok.AllArgsConstructor;
 

@@ -1,11 +1,10 @@
-package com.thesis.sqlite.service;
+package com.thesis.sqlite.services;
 
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
-import com.thesis.sqlite.entities.ContainerEntity;
 import com.thesis.sqlite.entities.PodEntity;
 import com.thesis.sqlite.repositories.PodRepository;
 
