@@ -16,7 +16,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 @NoArgsConstructor
-@Entity
+@Entity(name = "metric")
 @Getter
 @Setter
 @ToString

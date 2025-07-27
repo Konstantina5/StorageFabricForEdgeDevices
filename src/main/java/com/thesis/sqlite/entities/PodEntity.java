@@ -13,7 +13,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 @NoArgsConstructor
-@Entity
+@Entity(name = "pod")
 @Getter
 @Setter
 @ToString

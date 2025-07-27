@@ -16,6 +16,6 @@ public interface MetricRepository extends CrudRepository<MetricEntity, Long> {
 
     long countByEntityType(EntityTypeE type);
 
-    @Query("SELECT DISTINCT m.entityType FROM MetricEntity m")
+    @Query("SELECT DISTINCT m.entityType FROM metric m")
     Set<EntityTypeE> findDistinctEntityTypes();
 }

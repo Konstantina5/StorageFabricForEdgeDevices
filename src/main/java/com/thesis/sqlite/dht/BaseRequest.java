@@ -7,15 +7,15 @@ import java.util.Set;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.thesis.sqlite.enumerations.EntityTypeE;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.ToString;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @SuperBuilder
 @JsonInclude(JsonInclude.Include.NON_ABSENT)
 @ToString
 @Getter
+@Setter
+@NoArgsConstructor
 @AllArgsConstructor
 public class BaseRequest implements Serializable {
     private String nodeName;
