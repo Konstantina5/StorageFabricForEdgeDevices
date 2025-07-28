@@ -17,7 +17,7 @@ import static com.thesis.sqlite.kafka.KafkaTopics.NODE_INFO;
 
 @Component
 public class NodesInfoManager {
-    private Map<String, NodeInfos> nodeInfos = new ConcurrentHashMap<>();
+    private final Map<String, NodeInfos> nodeInfos = new ConcurrentHashMap<>();
     private final ApplicationEventPublisher eventPublisher;
 
     @Autowired

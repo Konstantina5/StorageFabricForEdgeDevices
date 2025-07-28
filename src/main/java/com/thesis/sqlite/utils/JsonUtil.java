@@ -17,9 +17,9 @@ public class JsonUtil {
         this.objectMapper = objectMapper;
     }
 
-    public <A> A fromJson(byte[] byteArray, TypeReference<A> typeReference) {
+    public <A> A fromJson(String str, TypeReference<A> typeReference) {
         try {
-            return objectMapper.readValue(byteArray, typeReference);
+            return objectMapper.readValue(str, typeReference);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
