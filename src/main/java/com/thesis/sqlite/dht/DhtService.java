@@ -26,6 +26,9 @@ import com.thesis.sqlite.utils.Utils;
 import lombok.Getter;
 import lombok.NonNull;
 
+import static com.thesis.sqlite.kafka.KafkaTopics.DOWNNODES_TOPIC;
+import static com.thesis.sqlite.kafka.KafkaTopics.INIT_TOPIC;
+
 @Service
 public class DhtService {
     private final Map<EntityTypeE, Set<String>> dataMap;
@@ -68,7 +71,7 @@ public class DhtService {
 
             final var newNodeRequest = BaseRequest.builder().currentNodes(existingNodes).dataMap(dataMap)
                     .nodeName(Utils.HOSTNAME).build();
-            kafkaProducer.sendMessage(newNodeRequest);
+            kafkaProducer.sendMessageWithKey(INIT_TOPIC, newNodeRequest);
         }
     }
 
@@ -316,6 +319,6 @@ public class DhtService {
     public void sendDownNodesRequest(Set<String> downNodes) {
         // Send a kafka message which will be caught from every other instance in order
         // to avoid request to every node
-        kafkaProducer.sendDownNodesMessage(downNodes);
+        kafkaProducer.sendMessageWithKey(DOWNNODES_TOPIC, downNodes);
     }
 }

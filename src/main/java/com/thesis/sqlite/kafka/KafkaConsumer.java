@@ -2,7 +2,10 @@ package com.thesis.sqlite.kafka;
 
 import java.util.Set;
 
+import com.thesis.sqlite.messages.kafka.NodeAdded;
+import com.thesis.sqlite.utils.JsonUtil;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
@@ -15,12 +18,16 @@ import com.thesis.sqlite.utils.Utils;
 
 import lombok.AllArgsConstructor;
 
+import static com.thesis.sqlite.kafka.KafkaTopics.NODE_INFO;
+
 @Service
 @AllArgsConstructor
 public class KafkaConsumer {
 
     private final DhtService dhtService;
     private final ObjectMapper mapper;
+    private final JsonUtil jsonUtil;
+    private final ApplicationEventPublisher eventPublisher;
 
     @KafkaListener(topics = "init-topic", groupId = "group_id")
     public void consumeInitNodeMessage(ConsumerRecord<String, String> message) {
@@ -40,6 +47,13 @@ public class KafkaConsumer {
         } else {
             Utils.LOGGER.warn("Skipping message produced by the producer service");
         }
+    }
+
+    @KafkaListener(topics = NODE_INFO, groupId = "group_id")
+    public void consumeNodeInfoMessage(ConsumerRecord<String, String> message) {
+        NodeAdded nodeAdded = jsonUtil.parse(message.value(), NodeAdded.class);
+        Utils.LOGGER.info("Message received: {}", nodeAdded);
+        eventPublisher.publishEvent(nodeAdded);
     }
 
     @KafkaListener(id = "downNodes", topics = "downnodes-topic", groupId = "${spring.kafka.consumer.group-id}")
