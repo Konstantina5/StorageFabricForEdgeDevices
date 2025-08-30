@@ -26,5 +26,9 @@ public interface Client {
         static ResponseEntity<Void> notFound() {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
+
+        static ResponseEntity<Void> unprocessableEntity() {
+            return new ResponseEntity<>(HttpStatus.UNPROCESSABLE_ENTITY);
+        }
     }
 }
