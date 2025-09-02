@@ -28,4 +28,10 @@ public class AlgoController {
                                                        Pageable pageable) {
         return metaSpark.implementMetaX(requestBody.endpoints(), requestBody.databases(), pageable);
     }
+
+    @PostMapping("/spark")
+    //maybe do not use a pageable here, just store the result to a file and not return to the user?
+    public CompletableFuture<List<String>> perform(@RequestBody String query) {
+        return metaSpark.implementMetaX(query);
+    }
 }

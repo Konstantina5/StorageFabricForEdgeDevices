@@ -1,12 +1,14 @@
 package com.thesis.sqlite.controllers;
 
-import com.thesis.sqlite.algorithm.MetaSpark;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.thesis.sqlite.components.ResultSetSerializer;
 import com.thesis.sqlite.components.query.ExternalInteractor;
 import com.thesis.sqlite.components.query.UtilsQuery;
 import com.thesis.sqlite.components.query.base.Attribute;
 import com.thesis.sqlite.components.query.base.Type;
-import com.thesis.sqlite.dto.JoinResult;
 import com.thesis.sqlite.dto.QueryResult;
+import com.thesis.sqlite.dto.request.GetAllResult;
 import com.thesis.sqlite.dto.request.JoinRequestBody;
 import com.thesis.sqlite.results.Client;
 import com.thesis.sqlite.utils.Future;
@@ -36,6 +38,31 @@ public class QueryController {
     public QueryController(JdbcTemplate jdbcTemplate, ExternalInteractor externalInteractor) {
         this.jdbcTemplate = jdbcTemplate;
         this.externalInteractor = externalInteractor;
+    }
+
+    @GetMapping("/get_all")
+    public ResponseEntity<GetAllResult> getAll(String tableName, Pageable pageable) {
+        try(Connection connection = Objects.requireNonNull(jdbcTemplate.getDataSource()).getConnection()) {
+            String query = "SELECT * FROM " + tableName + " LIMIT ? offset ?";
+            PreparedStatement preparedStatement = connection.prepareStatement(query);
+            preparedStatement.setInt(1, pageable.getPageSize());
+            preparedStatement.setLong(2, pageable.getOffset());
+
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            SimpleModule module = new SimpleModule();
+            module.addSerializer(new ResultSetSerializer());
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.registerModule(module);
+
+            GetAllResult getAllResult = new GetAllResult(objectMapper.valueToTree(resultSet));
+
+            return Client.Results.ok(getAllResult);
+
+        } catch(SQLException e){
+            throw new RuntimeException();
+        }
     }
 
     @PostMapping("/execute")

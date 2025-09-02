@@ -25,4 +25,9 @@ public class MetaSpark {
         return implementation.performAlgorithm(endpoints, databases, pageable);
     }
 
+    public CompletableFuture<List<String>> implementMetaX(String query) {
+        return implementation.performAlgorithm(query)
+                .thenApply(dataset -> dataset.toJSON().collectAsList());
+    }
+
 }

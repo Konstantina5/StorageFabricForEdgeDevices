@@ -35,7 +35,7 @@ import static com.thesis.sqlite.kafka.KafkaTopics.NODE_INFO;
 public class NodesInfoManager {
     private static final String MY_TABLE = "author"; //TODO k : add it as conf
     private final Map<String, NodeInfos> nodeInfos = new ConcurrentHashMap<>();
-    private final Map<String, NodeInfos> tableInfos = new ConcurrentHashMap<>();
+    public final Map<String, NodeInfos> tableInfos = new ConcurrentHashMap<>();
     private final ExternalInteractor externalInteractor;
     private final ApplicationEventPublisher eventPublisher;
 

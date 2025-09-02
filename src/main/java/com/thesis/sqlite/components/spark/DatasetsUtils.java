@@ -1,9 +1,9 @@
 package com.thesis.sqlite.components.spark;
 
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoder;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.spark.sql.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -30,6 +30,22 @@ public class DatasetsUtils {
 
     public static <T> Dataset<T> createDataset(SparkSession sparkSession, List<T> inputList, Encoder<T> encoder) {
         return sparkSession.createDataset(inputList, encoder);
+    }
+
+    public static Dataset<Row> createDataset(SparkSession sparkSession, List<JsonNode> list) {
+        ObjectMapper objectMapper = new ObjectMapper();//TODO inject
+        List<String> stringList = list.stream()
+                .map(json -> {
+                    try {
+                        return objectMapper.writeValueAsString(json);
+                    } catch (JsonProcessingException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }).toList();
+        Dataset<String> dataset = sparkSession.createDataset(stringList, Encoders.STRING());
+        Dataset<Row> df = sparkSession.read().json(dataset);
+
+        return df;
     }
 
     public static Dataset<Row> unionAllDatasets(List<Dataset<Row>> datasets) {

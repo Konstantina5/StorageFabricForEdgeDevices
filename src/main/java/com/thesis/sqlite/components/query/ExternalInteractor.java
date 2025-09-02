@@ -1,14 +1,24 @@
 package com.thesis.sqlite.components.query;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.thesis.sqlite.components.query.base.Attribute;
 import com.thesis.sqlite.components.query.base.Join;
 import com.thesis.sqlite.components.query.base.Relation;
+import com.thesis.sqlite.components.spark.DatasetsUtils;
+import com.thesis.sqlite.components.spark.SparkService;
 import com.thesis.sqlite.dto.QueryResult;
 import com.thesis.sqlite.dto.join.JoinDto;
+import com.thesis.sqlite.dto.request.GetAllResult;
 import com.thesis.sqlite.dto.request.JoinRequestBody;
+import com.thesis.sqlite.utils.PaginationUtil;
 import com.thesis.sqlite.utils.Pair;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,6 +31,7 @@ import java.sql.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 @Component
@@ -37,6 +48,58 @@ public class ExternalInteractor implements Interactor {
         this.jdbcTemplate = jdbcTemplate;
         this.registeredViews = new HashMap<>();
         this.registeredJoinViews = new HashMap<>();
+    }
+
+    public CompletableFuture<Dataset<Row>> getAllPaged(SparkService sparkService, String url, String tableName) {
+        CompletableFuture<Dataset<Row>> futures =
+                fetchAllPagesFor((page, size) -> fetchPage(url, tableName, page, size))
+                        .thenApply(res -> DatasetsUtils.createDataset(sparkService.getSpark(), res)
+                                        .toDF());
+
+        return futures;
+    }
+
+    private CompletableFuture<List<JsonNode>> fetchAllPagesFor(BiFunction<Integer, Integer,
+            CompletableFuture<ResponseEntity<GetAllResult>>> fetchPageFunc) {
+        Pageable pageable = PageRequest.of(0, 1000);
+        int page = pageable.getPageNumber();
+        int size = pageable.getPageSize();
+
+        return fetchPageFunc.apply(0, size)
+                .thenCompose(firstPageResult -> {
+                    JsonNode body = firstPageResult.getBody().getResult();
+                    int totalPages = Optional.ofNullable(firstPageResult.getHeaders().get(PaginationUtil.HeaderNames.PAGE_COUNT))
+                            .map(list -> list.get(0))
+                            .map(Integer::parseInt)
+                            .orElse(0);
+
+                    List<CompletableFuture<JsonNode>> futures = new ArrayList<>();
+
+                    futures.add(CompletableFuture.completedFuture(body));
+
+                    for (int i = 1; i < totalPages; i++) {
+                        futures.add(fetchPageFunc.apply(i, size).thenApply(HttpEntity::getBody).thenApply(GetAllResult::getResult));
+                    }
+
+                    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                            .thenApply(v -> futures.stream()
+                                    .map(CompletableFuture::join)
+                                    .toList());
+                });
+    }
+
+    private <T> CompletableFuture<ResponseEntity<GetAllResult>> fetchPage(String url, String tableName, int page, int size) {
+        URI uri = UriComponentsBuilder.fromUriString(url + "/get_all")
+                .queryParam("tableName", tableName)
+                .queryParam("page", page)
+                .queryParam("size", size)
+                .build().toUri();
+
+        return CompletableFuture.supplyAsync(() -> restClient.get()
+                        .uri(uri)
+                        .retrieve()
+                        .toEntity(GetAllResult.class),
+                taskExecutor);
     }
 
     private void executeQuery(String url, String query) {
