@@ -456,6 +456,8 @@ public class ExternalInteractor implements Interactor {
                 return "BOOLEAN";
             case Types.OTHER:
                 return "UUID";
+            case Types.BLOB:
+                return "BLOB";
             default:
                 return "VARCHAR(255)";
         }
