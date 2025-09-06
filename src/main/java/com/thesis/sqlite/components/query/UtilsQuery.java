@@ -1,6 +1,5 @@
 package com.thesis.sqlite.components.query;
 
-import com.thesis.sqlite.components.query.base.Attribute;
 import com.thesis.sqlite.components.query.base.Join;
 import com.thesis.sqlite.components.query.base.Relation;
 import com.thesis.sqlite.components.query.traversal.XNode;
@@ -27,15 +26,11 @@ public class UtilsQuery {
 
         ResultSetMetaData rsmd = rs.getMetaData();
 
-        //TODO: add to presto/trino?
         boolean isEmpty = false;
         try {
             if (!rs.isBeforeFirst())
                 isEmpty = true;
-        } catch (SQLFeatureNotSupportedException e) {
-
-
-        }
+        } catch (SQLFeatureNotSupportedException e) {}
 
         if (isEmpty) {
             System.out.println("------------------------------------------------------------------------");
@@ -140,7 +135,7 @@ public class UtilsQuery {
     //TODO k: maybe in the view add the common ids only on this server that tries to calculate the results
     public static CompletableFuture<List<Pair<String, Interactor>>> registerLocalViewsCF(ExternalInteractor interactor,
                                                                                          Map<String, String> tableDist,
-                                                                                         String query) {
+                                                                                         String query, String myTable) {
         ArrayList<Pair<String, Interactor>> tableAnnotations = new ArrayList<>();
         HashMap<String, String> aliasMap = getAliasMap(query); //(author, a)
 
@@ -152,7 +147,11 @@ public class UtilsQuery {
 
                             String localView = getLocalView(fullTableName, aliasMap.get(fullTableName), query);
                             tableAnnotations.add(new Pair<>(aliasMap.get(shortTableName), interactor));
-                            return interactor.registerLocalView(url, aliasMap.get(fullTableName), localView);
+                            return Optional.of(myTable)
+                                    .filter(table -> table.equals(fullTableName))
+                                    .map(table -> interactor.registerLocalView2(aliasMap.get(fullTableName), localView))
+                                    .orElseGet(() -> interactor.registerLocalView(url, aliasMap.get(fullTableName), localView));
+//                            return interactor.registerLocalView(url, aliasMap.get(fullTableName), localView);
                         }).toList())
                 .thenApply(__ -> tableAnnotations);
     }
@@ -244,7 +243,6 @@ public class UtilsQuery {
         String[] projAttrArr = projAttrs.split(" ");
         String delimiter1 = "";
         for (String projAttr : projAttrArr) {
-
             if (projAttr.contains(".") && projAttr.split("\\.")[0].equals(alias)) {
                 String attr = sanitize(projAttr.split("\\.")[1]);
                 if (!projection.toString().contains(attr)) {
@@ -268,7 +266,6 @@ public class UtilsQuery {
                     delimiter2 = " AND ";
                 }
 
-
             } else {
                 String attr = sanitize(lhs.split("\\.")[1]);
                 if (lhs.split("\\.")[0].equals(alias) && !projection.toString().contains(attr)) {
@@ -283,12 +280,11 @@ public class UtilsQuery {
             }
         }
 
-        if (selection.length() > 0)
-
+        if (!selection.isEmpty()) {
             selection.insert(0, " WHERE ");
+        }
 
-
-        String localView = "SELECT " + projection + " FROM " + tableName + selection.toString().replaceAll("date'", " date '");
+        String localView = "SELECT " + projection + " FROM " + tableName + selection;
         return localView;
 
     }

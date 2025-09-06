@@ -62,13 +62,20 @@ public class NodesInfoManager {
         ArrayList<String> joins = UtilsQuery.getJoinStr(sqlQuery);
         HashMap<String, String> aliasMap = UtilsQuery.getAliasMap(sqlQuery);
 
+        boolean b = aliasMap.keySet().stream()
+                .allMatch(tableInfos::containsKey);
+        if (!b) {
+            throw new RuntimeException("Not all tables are present, cannot execute query");
+        }
+
+
         Map<String, String> collect = aliasMap.keySet().stream()
                 .map(s -> new Pair<>(s, Optional.ofNullable(tableInfos.get(s))))
                 .filter(entry -> entry.getValue().isPresent()) //TODO k: do not execute query if we do not have infos for a table
                 .map(pair -> new Pair<>(pair.getKey(), pair.getValue().get()))
                 .collect(Collectors.toMap(Pair::getKey, p -> p.getValue().getUrl()));
 
-        return UtilsQuery.registerLocalViewsCF(externalInteractor, collect, sqlQuery)
+        return UtilsQuery.registerLocalViewsCF(externalInteractor, collect, sqlQuery, MY_TABLE)
                 .thenCompose(tableAnnotations -> getBaseRelationsCF(externalInteractor, collect, aliasMap, true)
                         .thenCompose(baseRelations -> {
                             // the joins in the left they always have the current table,
@@ -112,6 +119,7 @@ public class NodesInfoManager {
     }
 
     private static String rewriteFromClause(String sql) {
+        String myTableAlias = Optional.ofNullable(UtilsQuery.getAliasMap(sql).get(MY_TABLE)).orElse(MY_TABLE);
         String lower = sql.toLowerCase();
 
         int fromIndex = lower.indexOf("from");
@@ -121,6 +129,7 @@ public class NodesInfoManager {
             throw new IllegalArgumentException("Invalid sql query: " + sql);
         }
 
+        // 1. Handle FROM clause aliases
         String fromClause = sql.substring(fromIndex + 4, whereIndex).trim(); //remove from
 
         String regex = "\\b(\\w+)\\s+(?:as\\s+)?(\\w+)\\b";
@@ -138,9 +147,67 @@ public class NodesInfoManager {
 
         // Replaces the old FROM clause in the original SQL with the new one
         String beforeFrom = sql.substring(0, fromIndex + 4); // 'select ... from'
-        String afterWhere = sql.substring(whereIndex); // 'where ...'
+        String afterFrom = " " + newFromClause + " ";
 
-        return beforeFrom + " " + newFromClause + " " + afterWhere;
+
+        // Handle WHERE clause cleanup
+        // since the filtering of local table is made through the view is not needed in the query
+        // Extract everything after WHERE
+
+        // Find the next clause: GROUP BY / ORDER BY / LIMIT
+        int groupByIndex = lower.indexOf("group by", whereIndex);
+        int orderByIndex = lower.indexOf("order by", whereIndex);
+        int limitIndex = lower.indexOf("limit", whereIndex);
+
+        int nextClauseIndex = -1;
+        for (int idx : new int[]{groupByIndex, orderByIndex, limitIndex}) {
+            if (idx != -1 && (nextClauseIndex == -1 || idx < nextClauseIndex)) {
+                nextClauseIndex = idx;
+            }
+        }
+
+        // Extract WHERE conditions and the rest of the query
+        String whereConditionsPart;
+        String restOfQuery;
+        if (nextClauseIndex != -1) {
+            whereConditionsPart = sql.substring(whereIndex + 5, nextClauseIndex).trim(); // after "WHERE"
+            restOfQuery = sql.substring(nextClauseIndex); // GROUP BY / ORDER BY / LIMIT and beyond
+        } else {
+            whereConditionsPart = sql.substring(whereIndex + 5).trim();
+            restOfQuery = "";
+        }
+
+        // Split conditions by AND (preserve parentheses)
+        String[] conditions = whereConditionsPart.split("(?i)\\s+and\\s+");
+        List<String> newConditions = new ArrayList<>();
+
+        for (String cond : conditions) {
+            String condLower = cond.toLowerCase().trim();
+
+            boolean referencesTable = condLower.contains(myTableAlias + ".") || condLower.contains(myTableAlias + " ");
+            if (referencesTable) {
+                // Keep condition if it’s a join (table.column = otherTable.column)
+                boolean isJoin = condLower.matches(".*\\b" + myTableAlias + "\\.\\w+\\s*=\\s*\\w+\\.\\w+.*");
+                if (isJoin) {
+                    newConditions.add(cond.trim());
+                }
+                // otherwise skip
+            } else {
+                newConditions.add(cond.trim());
+            }
+        }
+
+        // Rebuild WHERE clause
+        String newWhereClause = "";
+        if (!newConditions.isEmpty()) {
+            newWhereClause = "WHERE " + String.join(" AND ", newConditions);
+        }
+
+        // Rebuild final query
+        return beforeFrom + afterFrom + newWhereClause + " " + restOfQuery;
+
+
+//        return beforeFrom + afterFrom + "where " + newWhereClause + " " + restOfQuery;
     }
 
     @EventListener

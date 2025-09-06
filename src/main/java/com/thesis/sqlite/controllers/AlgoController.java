@@ -1,6 +1,7 @@
 package com.thesis.sqlite.controllers;
 
 import com.thesis.sqlite.algorithm.MetaSpark;
+import com.thesis.sqlite.components.NodesInfoManager;
 import com.thesis.sqlite.dto.JoinResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
@@ -16,10 +17,12 @@ import java.util.concurrent.CompletableFuture;
 @RequestMapping("api/algorithm")
 public class AlgoController {
     private final MetaSpark metaSpark;
+    private final NodesInfoManager nodesInfoManager;
 
     @Autowired
-    public AlgoController(MetaSpark metaSpark) {
+    public AlgoController(MetaSpark metaSpark, NodesInfoManager nodesInfoManager) {
         this.metaSpark = metaSpark;
+        this.nodesInfoManager = nodesInfoManager;
     }
 
     @PostMapping
@@ -30,8 +33,12 @@ public class AlgoController {
     }
 
     @PostMapping("/spark")
-    //maybe do not use a pageable here, just store the result to a file and not return to the user?
     public CompletableFuture<List<String>> perform(@RequestBody String query) {
         return metaSpark.implementMetaX(query);
+    }
+
+    @PostMapping("/views_query")
+    public CompletableFuture<Void> performViews(@RequestBody String query) {
+        return nodesInfoManager.handleQuery(query);
     }
 }

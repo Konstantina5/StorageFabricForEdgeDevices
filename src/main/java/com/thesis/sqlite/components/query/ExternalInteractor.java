@@ -27,6 +27,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -157,10 +158,23 @@ public class ExternalInteractor implements Interactor {
 
     @Override
     public CompletableFuture<Void> registerLocalView(String url, String viewName, String query) {
-        String dropView = "DROP VIEW IF EXISTS " + viewName + " CASCADE";
+        String dropView = "DROP VIEW IF EXISTS " + viewName;
         String localView = "CREATE VIEW " + viewName + " AS " + query;
+
         return executeQueryCF(url, dropView)
                 .thenAccept(__ -> executeQueryCF(url, localView));
+    }
+
+    public CompletableFuture<Void> registerLocalView2(String viewName, String query) {
+        String dropView = "DROP VIEW IF EXISTS " + viewName;
+        String localView = "CREATE VIEW " + viewName + " AS " + query;
+
+        System.out.println("CREATE LOCAL VIEW: " + localView);
+
+
+        jdbcTemplate.execute(dropView);
+        jdbcTemplate.execute(localView);
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override
@@ -181,7 +195,7 @@ public class ExternalInteractor implements Interactor {
         //view name is b_a but should be something like a_b_id_equals_author
         //tableA = b
         //tableB = a
-        String dropView = "DROP VIEW IF EXISTS " + viewName + " CASCADE";
+        String dropView = "DROP VIEW IF EXISTS " + viewName;
 
 //        String joinView = "CREATE VIEW " + viewName + " AS SELECT * FROM " + tableA + "," + tableB + " WHERE " + joinOn;
         String joinView = "CREATE VIEW " + viewName + " AS SELECT * FROM " + tableB
@@ -194,8 +208,7 @@ public class ExternalInteractor implements Interactor {
     }
 
     public void createTableFromResultSet(QueryResult data, String tableName) {
-//        String dropTable = "DROP TABLE IF EXISTS " + tableName; TODO k: change to DROP Table
-        String dropTable = "DROP VIEW IF EXISTS " + tableName + " CASCADE";
+        String dropTable = "DROP TABLE IF EXISTS " + tableName;
 
         if (data == null) throw new RuntimeException();
 
@@ -266,21 +279,37 @@ public class ExternalInteractor implements Interactor {
     //TODO k: should find the external table let's say it would be put in tableB maybe?
     @Override
     public CompletableFuture<Pair<String, String>> registerJoinView(String url, String viewName, String tableA, String tableB, Join joinOn) {
-        Map<Attribute, List<UUID>> propertyMap = joinOn.predicate.stream()
+        Map<Attribute, List<Object>> propertyMap = joinOn.predicate.stream()
                 .map(pre -> {
-                    List<UUID> uuids = jdbcTemplate.query("SELECT " + pre.getLeft().getName() + " FROM " + tableA,
-                            (rs, rowNum) -> UUID.fromString(rs.getString(pre.getLeft().getName())));
-                    return new Pair<>(pre.getRight(), uuids);
+                    List<Object> values = jdbcTemplate.query(
+                            "SELECT " + pre.getLeft().getName() + " FROM " + tableA,
+                            (rs, rowNum) -> {
+                                Object value = rs.getObject(pre.getLeft().getName());
+                                if (value instanceof byte[] bytes) {
+                                    ByteBuffer bb = ByteBuffer.wrap(bytes);
+                                    return new UUID(bb.getLong(), bb.getLong());
+                                }
+                                if (value instanceof String str) {
+                                    try {
+                                        return UUID.fromString(str);
+                                    } catch (IllegalArgumentException e) {
+                                        return str;
+                                    }
+                                }
+                                return value;
+                            }
+                    );
+                    return new Pair<>(pre.getRight(), values);
                 }).collect(Collectors.toMap(Pair::getKey, Pair::getValue));
 
         //view name is b_a but should be something like a_b_id_equals_author
         //tableA = b
         //tableB = a
         //joinOn = author_id=author
-        String dropView = "DROP VIEW IF EXISTS " + viewName + " CASCADE";
+        String dropView = "DROP VIEW IF EXISTS " + viewName;
 
         String where = propertyMap.entrySet().stream()
-                .map(entry -> entry.getKey() + " in ('"
+                .map(entry -> entry.getKey().getName() + " in ('" //TODO k: this should change, only handles string currently
                         + entry.getValue().stream().map(String::valueOf).collect(Collectors.joining("','")) + "')")
                 .collect(Collectors.joining(" and "));
 
@@ -306,7 +335,7 @@ public class ExternalInteractor implements Interactor {
         //tableA = b
         //tableB = a
         //joinOn = author_id=author
-        String dropView = "DROP VIEW IF EXISTS " + viewName + " CASCADE";
+        String dropView = "DROP VIEW IF EXISTS " + viewName;
 
         String where = propertyMap.entrySet().stream()
                 .map(entry -> entry.getKey() + " in ('"
@@ -350,13 +379,9 @@ public class ExternalInteractor implements Interactor {
             try (Statement stmt = connection.createStatement()) {
                 int timeOut = 3600;
 
-                stmt.setQueryTimeout(timeOut);
-                stmt.execute("SET enable_nestloop=off;");
+//                stmt.setQueryTimeout(timeOut);
 
-                if (System.getProperties().containsKey("parallel") && System.getProperty("parallel").equals("false"))
-                    stmt.executeUpdate("SET max_parallel_workers_per_gather = 0;");
-
-                if (query.toLowerCase(Locale.ROOT).contains("select")) {
+                if (query.toLowerCase().contains("select")) {
                     ResultSet rs = stmt.executeQuery(query);
                     //ResultSet rs = stmt.executeQuery("SELECT 1");
                     UtilsQuery.printResultSet(rs);
