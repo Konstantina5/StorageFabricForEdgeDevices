@@ -1,7 +1,9 @@
 package com.thesis.sqlite.entities;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
 
+import java.sql.Types;
 import java.util.UUID;
 
 @Entity
@@ -9,8 +11,10 @@ import java.util.UUID;
 public class Book {
     @Id
     @GeneratedValue(strategy= GenerationType.AUTO)
+    @JdbcTypeCode(Types.VARCHAR)
     private UUID id;
     private String title;
+    @JdbcTypeCode(Types.VARCHAR)
     private UUID author;
 
     public Book(String title, UUID author) {

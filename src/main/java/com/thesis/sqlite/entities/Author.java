@@ -4,13 +4,17 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.Type;
 
+import java.sql.Types;
 import java.util.UUID;
 
 @Entity
 public class Author {
     @Id
     @GeneratedValue(strategy= GenerationType.AUTO)
+    @JdbcTypeCode(Types.VARCHAR)
     private UUID id;
     private String name;
 
