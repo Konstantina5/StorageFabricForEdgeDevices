@@ -1,7 +1,7 @@
 package com.thesis.sqlite.controllers;
 
 import com.thesis.sqlite.algorithm.MetaSpark;
-import com.thesis.sqlite.components.NodesInfoManager;
+import com.thesis.sqlite.algorithm.Views;
 import com.thesis.sqlite.dto.JoinResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
@@ -17,12 +17,12 @@ import java.util.concurrent.CompletableFuture;
 @RequestMapping("api/algorithm")
 public class AlgoController {
     private final MetaSpark metaSpark;
-    private final NodesInfoManager nodesInfoManager;
+    private final Views views;
 
     @Autowired
-    public AlgoController(MetaSpark metaSpark, NodesInfoManager nodesInfoManager) {
+    public AlgoController(MetaSpark metaSpark, Views views) {
         this.metaSpark = metaSpark;
-        this.nodesInfoManager = nodesInfoManager;
+        this.views = views;
     }
 
     @PostMapping
@@ -39,6 +39,6 @@ public class AlgoController {
 
     @PostMapping("/views_query")
     public CompletableFuture<String> performViews(@RequestBody String query) {
-        return nodesInfoManager.handleQuery(query);
+        return views.handleQuery(query);
     }
 }
