@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.thesis.sqlite.dht.BaseRequest;
 import com.thesis.sqlite.dht.DhtService;
 import com.thesis.sqlite.messages.kafka.NodeAdded;
+import com.thesis.sqlite.messages.kafka.NodePing;
 import com.thesis.sqlite.utils.JsonUtil;
 import com.thesis.sqlite.utils.Utils;
 import lombok.AllArgsConstructor;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import java.util.Set;
 
 import static com.thesis.sqlite.kafka.KafkaTopics.NODE_INFO;
+import static com.thesis.sqlite.kafka.KafkaTopics.NODE_PING;
 
 @Service
 @AllArgsConstructor
@@ -42,6 +44,13 @@ public class KafkaConsumer {
     @KafkaListener(topics = NODE_INFO, groupId = "group_id")
     public void consumeNodeInfoMessage(ConsumerRecord<String, String> message) {
         NodeAdded nodeAdded = jsonUtil.parse(message.value(), NodeAdded.class);
+        Utils.LOGGER.info("Message received: {}", nodeAdded);
+        eventPublisher.publishEvent(nodeAdded);
+    }
+
+    @KafkaListener(topics = NODE_PING, groupId = "group_id")
+    public void consumeNodePingMessage(ConsumerRecord<String, String> message) {
+        NodePing nodeAdded = jsonUtil.parse(message.value(), NodePing.class);
         Utils.LOGGER.info("Message received: {}", nodeAdded);
         eventPublisher.publishEvent(nodeAdded);
     }

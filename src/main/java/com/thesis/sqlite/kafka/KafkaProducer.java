@@ -1,6 +1,6 @@
 package com.thesis.sqlite.kafka;
 
-import com.thesis.sqlite.messages.kafka.KafkaMessage;
+import com.thesis.sqlite.messages.kafka.base.KafkaMessage;
 import com.thesis.sqlite.utils.JsonUtil;
 import com.thesis.sqlite.utils.Utils;
 import lombok.AllArgsConstructor;

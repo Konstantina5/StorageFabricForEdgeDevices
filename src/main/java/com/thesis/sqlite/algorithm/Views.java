@@ -10,6 +10,7 @@ import com.thesis.sqlite.dto.request.JoinRequestBody;
 import com.thesis.sqlite.mappers.ResponsesMapper;
 import com.thesis.sqlite.utils.Future;
 import com.thesis.sqlite.utils.Pair;
+import com.thesis.sqlite.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -24,7 +25,6 @@ import static com.thesis.sqlite.components.query.QueryHandler.getBaseRelationsCF
 
 @Component
 public class Views {
-    private static final String MY_TABLE = System.getenv("DB_NAME");
     private NodesInfoManager infoManager;
     private final ExternalInteractor externalInteractor;
 
@@ -39,6 +39,7 @@ public class Views {
         HashMap<String, String> aliasMap = UtilsQuery.getAliasMap(sqlQuery);
 
         boolean b = aliasMap.keySet().stream()
+//                .filter(key -> !key.equals(Utils.TABLE_NAME)) TODO k: uncomment when QueryHandler is ready
                 .allMatch(infoManager.getTableInfos()::containsKey);
         if (!b) {
             throw new RuntimeException("Not all tables are present, cannot execute query");
@@ -51,19 +52,19 @@ public class Views {
                 .map(pair -> new Pair<>(pair.getKey(), pair.getValue().get()))
                 .collect(Collectors.toMap(Pair::getKey, p -> p.getValue().getUrl()));
 
-        return UtilsQuery.registerLocalViewsCF(externalInteractor, collect, sqlQuery, MY_TABLE)
+        return UtilsQuery.registerLocalViewsCF(externalInteractor, collect, sqlQuery, Utils.TABLE_NAME)
                 .thenCompose(tableAnnotations -> getBaseRelationsCF(externalInteractor, collect, aliasMap, true)
                         .thenCompose(baseRelations -> {
                             // the joins in the left they always have the current table,
                             // and if table is not currently present then they are lexicography sorted with the greater being on the left
-                            List<Join> joinGraph = UtilsQuery.getJoinGraph(MY_TABLE, baseRelations, joins);
+                            List<Join> joinGraph = UtilsQuery.getJoinGraph(Utils.TABLE_NAME, baseRelations, joins);
 
                             List<Join> localJoins = joinGraph.stream()
-                                    .filter(join -> join.rhs.name.equals(MY_TABLE) || join.lhs.name.equals(MY_TABLE))
+                                    .filter(join -> join.rhs.name.equals(Utils.TABLE_NAME) || join.lhs.name.equals(Utils.TABLE_NAME))
                                     .toList();
 
                             Map<Relation, List<Join>> external = joinGraph.stream()
-                                    .filter(join -> !join.rhs.name.equals(MY_TABLE) && !join.lhs.name.equals(MY_TABLE))
+                                    .filter(join -> !join.rhs.name.equals(Utils.TABLE_NAME) && !join.lhs.name.equals(Utils.TABLE_NAME))
                                     .collect(Collectors.groupingBy(j -> j.lhs)); //TODO k: maybe i can group based on the url
 
                             return Future.allOf(localJoins.stream()
@@ -95,7 +96,7 @@ public class Views {
     }
 
     private static String rewriteFromClause(String sql) {
-        String myTableAlias = Optional.ofNullable(UtilsQuery.getAliasMap(sql).get(MY_TABLE)).orElse(MY_TABLE);
+        String myTableAlias = Optional.ofNullable(UtilsQuery.getAliasMap(sql).get(Utils.TABLE_NAME)).orElse(Utils.TABLE_NAME);
         String lower = sql.toLowerCase();
 
         int fromIndex = lower.indexOf("from");

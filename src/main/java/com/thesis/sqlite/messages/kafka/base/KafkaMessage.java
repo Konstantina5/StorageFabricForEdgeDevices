@@ -1,4 +1,4 @@
-package com.thesis.sqlite.messages.kafka;
+package com.thesis.sqlite.messages.kafka.base;
 
 public class KafkaMessage<T> {
     private final String topic;
