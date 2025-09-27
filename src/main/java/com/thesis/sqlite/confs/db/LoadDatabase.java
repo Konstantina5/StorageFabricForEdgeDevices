@@ -25,8 +25,8 @@ public class LoadDatabase {
         this.bookService = bookService;
         this.metricService = metricService;
         this.jsonUtil = jsonUtil;
-        loadDb();
-        loadMetrics();
+//        loadDb();
+//        loadMetrics();
     }
 
     private void loadMetrics() {
