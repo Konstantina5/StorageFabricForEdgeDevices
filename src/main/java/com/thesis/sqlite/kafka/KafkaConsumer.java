@@ -41,14 +41,14 @@ public class KafkaConsumer {
         }
     }
 
-    @KafkaListener(topics = NODE_INFO, groupId = "group_id")
+    @KafkaListener(topics = NODE_INFO, groupId = "node_info_group_#{T(com.thesis.sqlite.utils.Utils).TABLE_NAME}")
     public void consumeNodeInfoMessage(ConsumerRecord<String, String> message) {
         NodeAdded nodeAdded = jsonUtil.parse(message.value(), NodeAdded.class);
         Utils.LOGGER.info("Message received: {}", nodeAdded);
         eventPublisher.publishEvent(nodeAdded);
     }
 
-    @KafkaListener(topics = NODE_PING, groupId = "group_id")
+    @KafkaListener(topics = NODE_PING, groupId = "node_ping_group_#{T(com.thesis.sqlite.utils.Utils).TABLE_NAME}")
     public void consumeNodePingMessage(ConsumerRecord<String, String> message) {
         NodePing nodeAdded = jsonUtil.parse(message.value(), NodePing.class);
         Utils.LOGGER.info("Message received: {}", nodeAdded);
