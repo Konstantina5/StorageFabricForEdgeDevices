@@ -33,7 +33,7 @@ import static com.thesis.sqlite.kafka.KafkaTopics.NODE_INFO;
 
 @Component
 public class NodesInfoManager {
-    private static final String MY_TABLE = "author"; //TODO k : add it as conf
+    private static final String MY_TABLE = System.getenv("DB_NAME");
     private final Map<String, NodeInfos> nodeInfos = new ConcurrentHashMap<>();
     public final Map<String, NodeInfos> tableInfos = new ConcurrentHashMap<>();
     private final ExternalInteractor externalInteractor;
@@ -43,18 +43,20 @@ public class NodesInfoManager {
     public NodesInfoManager(ExternalInteractor externalInteractor, ApplicationEventPublisher eventPublisher) {
         this.externalInteractor = externalInteractor;
         this.eventPublisher = eventPublisher;
-        tableInfos.putIfAbsent("author", new NodeInfos("client", "http://localhost:8080/api", InfoType.AUTHOR,
-                new String[]{"author"}));
-        tableInfos.putIfAbsent("address", new NodeInfos("client", "http://localhost:8080/api", InfoType.ADDRESS,
-                new String[]{"address"}));
-        tableInfos.putIfAbsent("book", new NodeInfos("client", "http://localhost:8080/api", InfoType.BOOK,
-                new String[]{"book"}));
+
+//        tableInfos.putIfAbsent("author", new NodeInfos("client", "http://localhost:8080/api", InfoType.AUTHOR,
+//                new String[]{"author"}, "author"));
+//        tableInfos.putIfAbsent("address", new NodeInfos("client", "http://localhost:8080/api", InfoType.ADDRESS,
+//                new String[]{"address"}, "address"));
+//        tableInfos.putIfAbsent("book", new NodeInfos("client", "http://localhost:8080/api", InfoType.BOOK,
+//                new String[]{"book"}, "book"));
     }
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeNode() {
         KafkaMessage<NodeAdded> kafkaMessage = new KafkaMessage<>(NODE_INFO, new NodeAdded(Utils.HOSTNAME,
-                new NodeInfos("client", "http://localhost:8080/api", InfoType.AUTHOR, new String[]{"author"}))); //Add id as conf maybe
+                new NodeInfos("client", System.getenv("BASE_URL"), InfoType.AUTHOR, new String[]{"author"}, MY_TABLE)));
+        //Add id as conf maybe
         eventPublisher.publishEvent(kafkaMessage);
     }
 
@@ -212,7 +214,14 @@ public class NodesInfoManager {
 
     @EventListener
     public void onNodeAdded(NodeAdded nodeAdded) {
-        nodeInfos.put(nodeAdded.getNodeName(), nodeAdded.getNodeInfo());
+        Optional.ofNullable(MY_TABLE)
+                .filter(name -> !name.equals(nodeAdded.getNodeInfo().getTableName()))
+                .ifPresent(__ -> {
+                    nodeInfos.put(nodeAdded.getNodeName(), nodeAdded.getNodeInfo());
+                    tableInfos.put(nodeAdded.getNodeInfo().getTableName(), nodeAdded.getNodeInfo());
+                });
+
+        System.out.println();
     }
 
 }

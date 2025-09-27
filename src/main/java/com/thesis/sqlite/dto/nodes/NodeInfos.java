@@ -5,12 +5,14 @@ public class NodeInfos {
     private final String url;
     private final InfoType infoType;
     private final String[] types;
+    private final String tableName;
 
-    public NodeInfos(String id, String url, InfoType infoType, String[] types) {
+    public NodeInfos(String id, String url, InfoType infoType, String[] types, String tableName) {
         this.id = id;
         this.url = url;
         this.infoType = infoType;
         this.types = types;
+        this.tableName = tableName;
     }
 
     public String getId() {
@@ -27,5 +29,9 @@ public class NodeInfos {
 
     public String[] getTypes() {
         return types;
+    }
+
+    public String getTableName() {
+        return tableName;
     }
 }
