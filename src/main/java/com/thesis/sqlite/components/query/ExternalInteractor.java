@@ -161,6 +161,8 @@ public class ExternalInteractor implements Interactor {
         String dropView = "DROP VIEW IF EXISTS " + viewName;
         String localView = "CREATE VIEW " + viewName + " AS " + query;
 
+        System.out.println("\nCREATE EXTERNAL LOCAL VIEW: " + localView);
+
         return executeQueryCF(url, dropView)
                 .thenAccept(__ -> executeQueryCF(url, localView));
     }
@@ -169,7 +171,7 @@ public class ExternalInteractor implements Interactor {
         String dropView = "DROP VIEW IF EXISTS " + viewName;
         String localView = "CREATE VIEW " + viewName + " AS " + query;
 
-        System.out.println("CREATE LOCAL VIEW: " + localView);
+        System.out.println("\nCREATE LOCAL VIEW: " + localView);
 
 
         jdbcTemplate.execute(dropView);
@@ -367,7 +369,7 @@ public class ExternalInteractor implements Interactor {
     }
 
     @Override
-    public void executeQueryAndPrintResult(String query) {
+    public String executeQueryAndPrintResult(String query) {
 
         //Class.forName(this.jdbcProperties.getDriverName());
         System.out.println("------------------------------------------------------------------------");
@@ -384,9 +386,11 @@ public class ExternalInteractor implements Interactor {
                 if (query.toLowerCase().contains("select")) {
                     ResultSet rs = stmt.executeQuery(query);
                     //ResultSet rs = stmt.executeQuery("SELECT 1");
-                    UtilsQuery.printResultSet(rs);
-                } else
+                    return UtilsQuery.printResultSet(rs);
+                } else {
                     stmt.execute(query);
+                    return "";
+                }
 
             } catch (SQLException e) {
                 throw new RuntimeException(e);

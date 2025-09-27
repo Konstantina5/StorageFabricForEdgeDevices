@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public class QueryHandler {
+    //TODO k: should not call api for local table
     public static CompletableFuture<List<Relation>> getBaseRelationsCF(ExternalInteractor externalInteractor,
                                                                        Map<String, String> urls,
                                                                        Map<String, String> tableAnnotations,

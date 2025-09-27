@@ -26,7 +26,7 @@ public interface Interactor {
 
     void executeQuery(String query);
 
-    void executeQueryAndPrintResult(String query) throws ClassNotFoundException;
+    String executeQueryAndPrintResult(String query) throws ClassNotFoundException;
 
     long getQueryCost(String query);
 

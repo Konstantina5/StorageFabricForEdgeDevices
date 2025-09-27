@@ -60,7 +60,7 @@ public class NodesInfoManager {
         eventPublisher.publishEvent(kafkaMessage);
     }
 
-    public CompletableFuture<Void> handleQuery(String sqlQuery) {
+    public CompletableFuture<String> handleQuery(String sqlQuery) {
         ArrayList<String> joins = UtilsQuery.getJoinStr(sqlQuery);
         HashMap<String, String> aliasMap = UtilsQuery.getAliasMap(sqlQuery);
 
@@ -73,7 +73,7 @@ public class NodesInfoManager {
 
         Map<String, String> collect = aliasMap.keySet().stream()
                 .map(s -> new Pair<>(s, Optional.ofNullable(tableInfos.get(s))))
-                .filter(entry -> entry.getValue().isPresent()) //TODO k: do not execute query if we do not have infos for a table
+                .filter(entry -> entry.getValue().isPresent())
                 .map(pair -> new Pair<>(pair.getKey(), pair.getValue().get()))
                 .collect(Collectors.toMap(Pair::getKey, p -> p.getValue().getUrl()));
 
@@ -112,12 +112,12 @@ public class NodesInfoManager {
                                                     .map(ResponseEntity::getBody)
                                                     .ifPresent(body -> externalInteractor.createTableFromResultSet(body, pair.getKey().name)));
                                 }).toList()))
-                        .thenAccept(__ -> execute(sqlQuery)));
+                        .thenApply(__ -> execute(sqlQuery)));
     }
 
-    public void execute(String sqlQuery) {
+    public String execute(String sqlQuery) {
         String finalQuery = rewriteFromClause(sqlQuery);
-        externalInteractor.executeQueryAndPrintResult(finalQuery);
+        return externalInteractor.executeQueryAndPrintResult(finalQuery);
     }
 
     private static String rewriteFromClause(String sql) {
@@ -186,15 +186,9 @@ public class NodesInfoManager {
         for (String cond : conditions) {
             String condLower = cond.toLowerCase().trim();
 
-            boolean referencesTable = condLower.contains(myTableAlias + ".") || condLower.contains(myTableAlias + " ");
-            if (referencesTable) {
-                // Keep condition if it’s a join (table.column = otherTable.column)
-                boolean isJoin = condLower.matches(".*\\b" + myTableAlias + "\\.\\w+\\s*=\\s*\\w+\\.\\w+.*");
-                if (isJoin) {
-                    newConditions.add(cond.trim());
-                }
-                // otherwise skip
-            } else {
+            // Keep only join-style conditions: alias.col = otherAlias.col
+            boolean isJoin = condLower.matches(".*\\b\\w+\\.\\w+\\s*=\\s*\\w+\\.\\w+.*");
+            if (isJoin) {
                 newConditions.add(cond.trim());
             }
         }
@@ -215,7 +209,7 @@ public class NodesInfoManager {
     @EventListener
     public void onNodeAdded(NodeAdded nodeAdded) {
         Optional.ofNullable(MY_TABLE)
-                .filter(name -> !name.equals(nodeAdded.getNodeInfo().getTableName()))
+//                .filter(name -> !name.equals(nodeAdded.getNodeInfo().getTableName()))
                 .ifPresent(__ -> {
                     nodeInfos.put(nodeAdded.getNodeName(), nodeAdded.getNodeInfo());
                     tableInfos.put(nodeAdded.getNodeInfo().getTableName(), nodeAdded.getNodeInfo());

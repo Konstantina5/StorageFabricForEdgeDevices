@@ -38,7 +38,7 @@ public class AlgoController {
     }
 
     @PostMapping("/views_query")
-    public CompletableFuture<Void> performViews(@RequestBody String query) {
+    public CompletableFuture<String> performViews(@RequestBody String query) {
         return nodesInfoManager.handleQuery(query);
     }
 }

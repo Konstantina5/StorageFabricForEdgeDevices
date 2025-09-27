@@ -22,9 +22,12 @@ import java.util.stream.Collectors;
 
 public class UtilsQuery {
 
-    public static void printResultSet(ResultSet rs) throws SQLException {
+    public static String printResultSet(ResultSet rs) throws SQLException {
 
         ResultSetMetaData rsmd = rs.getMetaData();
+        int columnCount = rsmd.getColumnCount();
+
+        StringBuilder out = new StringBuilder();
 
         boolean isEmpty = false;
         try {
@@ -40,21 +43,26 @@ public class UtilsQuery {
             System.out.println("------------------------------------------------------------------------");
             System.out.println("Query Result:");
             System.out.println("------------------------------------------------------------------------");
-            while (rs.next()) {
-                StringBuilder sb = new StringBuilder();
 
-                for (int i = 1; i < rsmd.getColumnCount() + 1; i++) {
-
-                    if (i != 1)
-                        sb.append("|");
-                    sb.append(rs.getString(i));
-
-                }
-                System.out.println(sb.toString());
+            // Print column names
+            for (int i = 1; i <= columnCount; i++) {
+                if (i > 1) out.append("|");
+                out.append(rsmd.getColumnName(i));
             }
-            System.out.println("------------------------------------------------------------------------");
-        }
+            out.append("\n");
 
+            while (rs.next()) {
+                for (int i = 1; i < rsmd.getColumnCount() + 1; i++) {
+                    if (i != 1) out.append("|");
+                    out.append(rs.getString(i));
+                }
+                out.append("\n");
+            }
+            System.out.println(out);
+            System.out.println("------------------------------------------------------------------------");
+            return out.toString();
+        }
+        return out.toString();
     }
 
     //TODO k
