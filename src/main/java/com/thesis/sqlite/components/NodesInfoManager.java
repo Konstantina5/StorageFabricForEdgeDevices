@@ -1,9 +1,9 @@
 package com.thesis.sqlite.components;
 
 import com.thesis.sqlite.dto.nodes.NodeInfos;
+import com.thesis.sqlite.messages.kafka.NodeAdded;
 import com.thesis.sqlite.messages.kafka.NodePing;
 import com.thesis.sqlite.messages.kafka.base.KafkaMessage;
-import com.thesis.sqlite.messages.kafka.NodeAdded;
 import com.thesis.sqlite.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.thesis.sqlite.kafka.KafkaTopics.NODE_INFO;
+import static com.thesis.sqlite.kafka.KafkaTopics.NODE_PING;
 
 @Component
 public class NodesInfoManager {
@@ -68,7 +69,7 @@ public class NodesInfoManager {
     public void sendNodePing() {
         //Send a ping message to indicate that the node is still active
         KafkaMessage<NodePing> kafkaMessage =
-                new KafkaMessage<>(NODE_INFO, new NodePing(Utils.HOSTNAME, currentNodeInfo));//Add id as conf maybe
+                new KafkaMessage<>(NODE_PING, new NodePing(Utils.HOSTNAME, currentNodeInfo));//Add id as conf maybe
         eventPublisher.publishEvent(kafkaMessage);
     }
 
