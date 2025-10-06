@@ -1,9 +1,10 @@
-FROM  openjdk:21
+FROM openjdk:17-jdk-slim
 COPY target/sqlite-spring-boot.jar /opt/assets/sqlite-spring-boot.jar
 WORKDIR /opt/assets
 ENV JAVA_OPTS_GC="-server -XX:+AlwaysPreTouch -XX:+UseG1GC -XX:+ScavengeBeforeFullGC -XX:+DisableExplicitGC"
 ENV JAVA_OPTS="-Xms256m -Xmx256m"
 ENV HOSTNAME=client
+ENV DB_NAME=orders
 EXPOSE 50000
 EXPOSE 50001
 EXPOSE 29000
