@@ -3,6 +3,7 @@ package com.thesis.sqlite.controllers;
 import com.thesis.sqlite.algorithm.MetaSpark;
 import com.thesis.sqlite.algorithm.Views;
 import com.thesis.sqlite.dto.JoinResult;
+import com.thesis.sqlite.dto.ResultWithTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -33,12 +36,22 @@ public class AlgoController {
     }
 
     @PostMapping("/spark")
-    public CompletableFuture<List<String>> perform(@RequestBody String query) {
-        return metaSpark.implementMetaX(query);
+    public CompletableFuture<ResultWithTime> perform(@RequestBody String query) {
+        Instant start = Instant.now();
+        return metaSpark.implementMetaX(query)
+                .thenApply(res -> {
+                    Instant end = Instant.now();
+                    return new ResultWithTime(end.toEpochMilli() - start.toEpochMilli(), res);
+                });
     }
 
     @PostMapping("/views_query")
-    public CompletableFuture<String> performViews(@RequestBody String query) {
-        return views.handleQuery(query);
+    public CompletableFuture<ResultWithTime> performViews(@RequestBody String query) {
+        Instant start = Instant.now();
+        return views.handleQuery(query)
+                .thenApply(res -> {
+                    Instant end = Instant.now();
+                    return new ResultWithTime(end.toEpochMilli() - start.toEpochMilli(), Collections.singletonList(res));
+                });
     }
 }

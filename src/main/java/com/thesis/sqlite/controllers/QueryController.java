@@ -67,6 +67,7 @@ public class QueryController {
 
     @PostMapping("/execute")
     public ResponseEntity<?> perform(@RequestBody String query) {
+        System.out.println("Controller [query/execute]:" + query);
         try {
             if(query.toLowerCase().startsWith("select")) {
                 try(Connection connection = Objects.requireNonNull(jdbcTemplate.getDataSource()).getConnection()) {

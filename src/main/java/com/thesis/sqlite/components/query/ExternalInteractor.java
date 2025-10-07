@@ -103,13 +103,6 @@ public class ExternalInteractor implements Interactor {
                 taskExecutor);
     }
 
-    private void executeQuery(String url, String query) {
-        restClient.post()
-                .uri(url + "/query/execute")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(query);
-    }
-
     public CompletableFuture<ResponseEntity<Void>> executeQueryCF(String url, String query) {
         return CompletableFuture.supplyAsync(() ->
                         restClient.post()
@@ -161,7 +154,7 @@ public class ExternalInteractor implements Interactor {
         String dropView = "DROP VIEW IF EXISTS " + viewName;
         String localView = "CREATE VIEW " + viewName + " AS " + query;
 
-        System.out.println("\nCREATE EXTERNAL LOCAL VIEW: " + localView);
+        System.out.println("\nCREATE EXTERNAL LOCAL VIEW [" + url + "]: " + localView);
 
         return executeQueryCF(url, dropView)
                 .thenAccept(__ -> executeQueryCF(url, localView));

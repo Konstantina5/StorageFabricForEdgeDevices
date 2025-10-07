@@ -260,6 +260,32 @@ public class UtilsQuery {
             }
         }
 
+        List<String> projections = new ArrayList<>();
+        List<String> selectItems = splitByCommaRespectingParentheses(projAttrs);
+
+        for (String item : selectItems) {
+            String trimmed = item.trim();
+
+            // Check if this select expression involves our alias
+            if (trimmed.matches("(?i).*\\b" + alias + "\\..*")) {
+                // If expression also references other tables, simplify it
+                if (trimmed.matches("(?i).*(\\b" + alias + "\\..*\\b\\w+\\..*|\\b\\w+\\..*\\b" + alias + "\\.).*")) {
+                    // Collect only columns from our alias
+                    Set<String> aliasColumns = extractAliasColumns(trimmed, alias);
+                    for (String col : aliasColumns) {
+                        if (!projections.contains(col))
+                            projections.add(col);
+                    }
+                } else {
+                    // Only this alias: keep as-is (but remove alias prefix)
+                    String cleaned = trimmed.replaceAll("(?i)\\b" + alias + "\\.", "");
+                    projections.add(cleaned);
+                }
+            }
+        }
+        String projectionStr = String.join(", ", projections);
+
+
         String selPredStr = subStrBetween(query, "where", "group");
         String[] selPreds = selPredStr.split(" and ");
         String delimiter2 = "";
@@ -292,9 +318,36 @@ public class UtilsQuery {
             selection.insert(0, " WHERE ");
         }
 
-        String localView = "SELECT " + projection + " FROM " + tableName + selection;
+        String localView = "SELECT " + projectionStr + " FROM " + tableName + selection;
         return localView;
+    }
 
+    private static List<String> splitByCommaRespectingParentheses(String input) {
+        List<String> result = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        int depth = 0;
+        for (char c : input.toCharArray()) {
+            if (c == '(') depth++;
+            if (c == ')') depth--;
+            if (c == ',' && depth == 0) {
+                result.add(current.toString());
+                current.setLength(0);
+            } else {
+                current.append(c);
+            }
+        }
+        if (current.length() > 0) result.add(current.toString());
+        return result;
+    }
+
+    // Helper to extract all columns belonging to a given alias ---
+    private static Set<String> extractAliasColumns(String expression, String alias) {
+        Set<String> cols = new LinkedHashSet<>();
+        Matcher m = Pattern.compile("(?i)\\b" + alias + "\\.(\\w+)").matcher(expression);
+        while (m.find()) {
+            cols.add(m.group(1)); // just the column name
+        }
+        return cols;
     }
 
     public static String subStrBetween(String str, String open, String close) {
@@ -313,7 +366,8 @@ public class UtilsQuery {
 
     public static String sanitize(String str) {
         if (!str.contains("'"))
-            return str.replace(" ", "").replace("\n", "").replace(",", "");
+            return str.replace(" ", "").replace("\n", "").replace(",", "")
+                    .replace(")", "");
         else
             return str.replace("\n", "").replace(",", "");
     }
