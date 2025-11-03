@@ -34,6 +34,26 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_JMX_PORT: 9101
       KAFKA_JMX_HOSTNAME: localhost
+
+  ksqldb-server:
+    image: confluentinc/cp-ksqldb-server:7.6.0
+    hostname: ksqldb
+    container_name: ksqldb
+    networks:
+      - sqlite
+    depends_on:
+      - kafka
+    ports:
+      - "8088:8088"   # ksqlDB server REST API
+    environment:
+      KSQL_CONFIG_DIR: "/etc/ksql"
+      KSQL_BOOTSTRAP_SERVERS: "kafka:29092"
+      KSQL_LISTENERS: "http://0.0.0.0:8088"
+      KSQL_KSQL_SCHEMA_REGISTRY_URL: "http://schema-registry:8081" # optional if using schema registry
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_REPLICATION_FACTOR: 1
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: "true"
+      KSQL_KSQL_QUERY_PULL_TABLE_SCAN_ENABLED: "true"
+
   kafdrop:
     image: obsidiandynamics/kafdrop
     restart: "no"

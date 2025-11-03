@@ -109,7 +109,7 @@
 		<!-- https://mvnrepository.com/artifact/org.apache.httpcomponents.core5/httpcore5 -->
 <!--		<dependency>-->
 <!--			<groupId>org.apache.httpcomponents.core5</groupId>-->
-<!--			<artifactId>httpcore5</artifactId>-->
+<!--			<artifactId>httpcore5</artsiifactId>-->
 <!--			<version>5.2.4</version>-->
 <!--		</dependency>-->
 
@@ -125,8 +125,32 @@
 			<version>${spark.version}</version>
 		</dependency>
 
+		<dependency>
+			<groupId>io.confluent.ksql</groupId>
+			<artifactId>ksqldb-api-client</artifactId>
+			<version>7.6.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.kafka</groupId>
+			<artifactId>kafka-streams</artifactId>
+			<version>4.0.0</version>
+		</dependency>
+
 
 	</dependencies>
+
+	<repositories>
+		<repository>
+			<id>central</id>
+			<url>https://repo.maven.apache.org/maven2</url>
+		</repository>
+		<repository>
+			<id>confluent</id>
+			<url>https://packages.confluent.io/maven/</url>
+		</repository>
+	</repositories>
+
+
 
 	<build>
 		<finalName>${project.artifactId}</finalName>
