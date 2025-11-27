@@ -6,11 +6,9 @@ import com.thesis.sqlite.components.NodesInfoManager;
 import com.thesis.sqlite.components.query.ExternalInteractor;
 import com.thesis.sqlite.components.query.UtilsQuery;
 import com.thesis.sqlite.components.spark.SparkService;
-import com.thesis.sqlite.dto.JoinResult;
-import com.thesis.sqlite.dto.request.Databases;
-import com.thesis.sqlite.dto.request.Endpoints;
 import com.thesis.sqlite.utils.Future;
 import com.thesis.sqlite.utils.Pair;
+import com.thesis.sqlite.utils.Utils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,7 +20,7 @@ import java.util.stream.Collectors;
 public class Advanced extends ImplementationTypeManager {
     @Value( "${spring.datasource.url}" )
     private String jdbcUrl;
-    private static final String MY_TABLE = "author"; //TODO k : add it as conf
+    private static final String MY_TABLE = Utils.TABLE_NAME;
     private final ExternalServicesClient externalServicesClient;
     private final SparkService sparkService;
     private final ExternalInteractor externalInteractor;
@@ -65,13 +63,4 @@ public class Advanced extends ImplementationTypeManager {
                 .thenApply(__ -> sparkService.getSpark().sql(sqlQuery));
     }
 
-    @Override
-    public CompletableFuture<Set<UUID>> findCommonIds(Endpoints endpoints, Databases databases) {
-        return null;
-    }
-
-    @Override
-    public CompletableFuture<Dataset<JoinResult>> finalJoinResult(Endpoints endpoints, Databases databases, Set<UUID> commonIds) {
-        return null;
-    }
 }
