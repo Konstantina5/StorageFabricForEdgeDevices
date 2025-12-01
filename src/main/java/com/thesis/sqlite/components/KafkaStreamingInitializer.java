@@ -15,6 +15,6 @@ public class KafkaStreamingInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        kafkaStreaming.createStreamsAndTables();
+        kafkaStreaming.initialize();
     }
 }

@@ -1,22 +1,32 @@
 package com.thesis.sqlite.algorithm.streaming;
+import com.thesis.sqlite.components.streaming.StreamingTemplateService;
+import com.thesis.sqlite.dto.request.streaming.QueryTable;
 import io.confluent.ksql.api.client.*;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 @Component
 public class KafkaStreaming {
     private final Client client;
+    private final StreamingTemplateService streamingTemplateService;
 
     @Autowired
-    public KafkaStreaming(Client client) {
+    public KafkaStreaming(Client client, StreamingTemplateService streamingTemplateService) {
         this.client = client;
+        this.streamingTemplateService = streamingTemplateService;
     }
 
-    public void createStreamsAndTables() throws ExecutionException, InterruptedException, ExecutionException {
+    public CompletableFuture<ExecuteStatementResult> initialize() {
+        return CompletableFuture.supplyAsync(streamingTemplateService::loadKafkaStreamTemplate)
+                .thenCompose(client::executeStatement);
+    }
+
+    public void createStreamsAndTables() throws InterruptedException, ExecutionException {
         // Create ORDERS stream
         client.executeStatement("""
             CREATE STREAM IF NOT EXISTS orders (
@@ -54,7 +64,7 @@ public class KafkaStreaming {
               EMIT CHANGES;
         """).get();
 
-        client.executeStatement("DROP TABLE IF EXISTS enriched_orders_table;");
+        client.executeStatement("DROP TABLE IF EXISTS enriched_orders_table;").get();
 
         client.executeStatement("""
                 CREATE TABLE enriched_orders_table AS
@@ -67,10 +77,26 @@ public class KafkaStreaming {
                     GROUP BY O.PRODUCT_ID
                     EMIT CHANGES;
          """).get();
-
     }
 
-    public void streamEnrichedOrders() throws ExecutionException, InterruptedException {
+    public CompletableFuture<ExecuteStatementResult> createQueryTable(QueryTable queryTable) {
+//        SELECT
+//        O.PRODUCT_ID AS PRODUCT_ID,
+//                SUM(O.QUANTITY) AS TOTAL_QUANTITY,
+//        MAX(I.STOCK_LEVEL) AS STOCK_LEVEL
+//        FROM orders O
+//        LEFT JOIN inventory I ON O.PRODUCT_ID = I.PRODUCT_ID
+//        GROUP BY O.PRODUCT_ID
+
+        return  client.executeStatement(String.format("DROP TABLE IF EXISTS %s;", queryTable.tableName()))
+                .thenCompose(__ -> client.executeStatement(String.format("""
+                    CREATE TABLE %s AS
+                        %s
+                        EMIT CHANGES;
+                    """, queryTable.tableName(), queryTable.query())));
+    }
+
+    public void streamEnrichedOrders() {
         client.streamQuery("SELECT * FROM enriched_orders_table EMIT CHANGES;")
                 .thenAccept(streamedResult -> streamedResult.subscribe(new Subscriber<Row>() {
                     private Subscription subscription;
@@ -107,5 +133,17 @@ public class KafkaStreaming {
                     }
                 }));
 
+    }
+
+    public CompletableFuture<Void> getPushQueryResults(String tableName) {
+        return client.streamQuery(String.format("SELECT * FROM %s EMIT CHANGES;", tableName))
+                .thenAccept(streamedQueryResult -> {
+                    System.out.println("Query has started. Query ID: " + streamedQueryResult.queryID());
+                    RowSubscriber subscriber = new RowSubscriber();
+                    streamedQueryResult.subscribe(subscriber);
+                }).exceptionally(e -> {
+                    System.out.println("Request failed: " + e);
+                    return null;
+                });
     }
 }
