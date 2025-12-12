@@ -1,0 +1,14 @@
+{
+  "product_id": {
+    "type": "INTEGER",
+    "generation": "INCREASING",
+    "min": 1,
+    "max": 1000
+  },
+  "stock_level": {
+    "type": "INTEGER",
+    "generation": "RANDOM",
+    "min": 10,
+    "max": 99
+  }
+}

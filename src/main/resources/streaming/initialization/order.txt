@@ -1,0 +1,9 @@
+CREATE STREAM IF NOT EXISTS orders (
+      product_id INT,
+      quantity INT
+    ) WITH (
+      KAFKA_TOPIC='orders',
+      VALUE_FORMAT='JSON',
+      PARTITIONS=1,
+      REPLICAS=1
+);

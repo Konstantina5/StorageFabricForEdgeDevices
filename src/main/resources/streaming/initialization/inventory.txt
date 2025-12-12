@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS inventory (
+      product_id INT PRIMARY KEY,
+      stock_level INT
+    ) WITH (
+      KAFKA_TOPIC='inventory',
+      VALUE_FORMAT='JSON',
+      PARTITIONS=1,
+      REPLICAS=1
+);
