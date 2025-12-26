@@ -1,0 +1,91 @@
+version: "3.2"
+
+services:
+  sqlite-customer:
+    image: edge-sqlite-db:1.0.0
+    hostname: customer
+    ports:
+      - 29001:8080
+    environment:
+      DB_NAME: "customer"
+      BASE_URL: "http://localhost:29001"
+      HOSTNAME: "customer"
+      DISCOVERY: "server"
+      CLUSTER_HEAD: "true"
+      PLACEMENT: "false"
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    volumes:
+      - ./generate_data/ssb:/mnt/databases
+    networks:
+      - sqlite
+
+  sqlite-supplier:
+    image: edge-sqlite-db:1.0.0
+    hostname: supplier
+    ports:
+      - 29002:8080
+    environment:
+      DB_NAME: "supplier"
+      BASE_URL: "http://localhost:29002"
+      HOSTNAME: "supplier"
+      DISCOVERY: "server"
+      PLACEMENT: "false"
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    volumes:
+      - ./generate_data/ssb:/mnt/databases
+    networks:
+      - sqlite
+
+  sqlite-part:
+    image: edge-sqlite-db:1.0.0
+    hostname: part
+    ports:
+      - 29003:8080
+    environment:
+      DB_NAME: "part"
+      BASE_URL: "http://localhost:29003"
+      HOSTNAME: "part"
+      DISCOVERY: "server"
+      PLACEMENT: "false"
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    volumes:
+      - ./generate_data/ssb:/mnt/databases
+    networks:
+      - sqlite
+
+  sqlite-date:
+    image: edge-sqlite-db:1.0.0
+    hostname: date
+    ports:
+      - 29004:8080
+    environment:
+      DB_NAME: "date"
+      BASE_URL: "http://localhost:29004"
+      HOSTNAME: "date"
+      DISCOVERY: "server"
+      PLACEMENT: "false"
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    volumes:
+      - ./generate_data/ssb:/mnt/databases
+    networks:
+      - sqlite
+
+  sqlite-lineorder:
+    image: edge-sqlite-db:1.0.0
+    hostname: lineorder
+    ports:
+      - 29005:8080
+    environment:
+      DB_NAME: "lineorder"
+      BASE_URL: "http://localhost:29005"
+      HOSTNAME: "lineorder"
+      DISCOVERY: "server"
+      PLACEMENT: "false"
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    volumes:
+      - ./generate_data/ssb:/mnt/databases
+    networks:
+      - sqlite
+
+networks:
+  sqlite:

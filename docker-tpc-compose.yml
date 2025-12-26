@@ -1,0 +1,142 @@
+version: "3.2"
+
+services:
+  sqlite-region:
+    image: edge-sqlite-db:1.0.0
+    hostname: region
+    ports:
+      - 29001:8080
+    environment:
+      DB_NAME: "region"
+      BASE_URL: "http://localhost:29001"
+      HOSTNAME: "region"
+      DISCOVERY: "server"
+      CLUSTER_HEAD: "true"
+      PLACEMENT: "false"
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    volumes:
+      - ./generate_data:/mnt/databases
+    networks:
+      - sqlite
+
+  sqlite-nation:
+    image: edge-sqlite-db:1.0.0
+    hostname: nation
+    ports:
+      - 29002:8080
+    environment:
+      DB_NAME: "nation"
+      BASE_URL: "http://localhost:29002"
+      HOSTNAME: "nation"
+      DISCOVERY: "server"
+      PLACEMENT: "false"
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    volumes:
+      - ./generate_data:/mnt/databases
+    networks:
+      - sqlite
+
+  sqlite-part:
+    image: edge-sqlite-db:1.0.0
+    hostname: part
+    ports:
+      - 29003:8080
+    environment:
+      DB_NAME: "part"
+      BASE_URL: "http://localhost:29003"
+      HOSTNAME: "part"
+      DISCOVERY: "server"
+      PLACEMENT: "false"
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    volumes:
+      - ./generate_data:/mnt/databases
+    networks:
+      - sqlite
+
+  sqlite-supplier:
+    image: edge-sqlite-db:1.0.0
+    hostname: supplier
+    ports:
+      - 29004:8080
+    environment:
+      DB_NAME: "supplier"
+      BASE_URL: "http://localhost:29004"
+      HOSTNAME: "supplier"
+      DISCOVERY: "server"
+      PLACEMENT: "false"
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    volumes:
+      - ./generate_data:/mnt/databases
+    networks:
+      - sqlite
+
+  sqlite-partsupp:
+    image: edge-sqlite-db:1.0.0
+    hostname: partsupp
+    ports:
+      - 29005:8080
+    environment:
+      DB_NAME: "partsupp"
+      BASE_URL: "http://localhost:29005"
+      HOSTNAME: "partsupp"
+      DISCOVERY: "server"
+      PLACEMENT: "false"
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    volumes:
+      - ./generate_data:/mnt/databases
+    networks:
+      - sqlite
+
+  sqlite-customer:
+    image: edge-sqlite-db:1.0.0
+    hostname: customer
+    ports:
+      - 29006:8080
+    environment:
+      DB_NAME: "customer"
+      BASE_URL: "http://localhost:29006"
+      HOSTNAME: "customer"
+      DISCOVERY: "server"
+      PLACEMENT: "false"
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    volumes:
+      - ./generate_data:/mnt/databases
+    networks:
+      - sqlite
+
+  sqlite-orders:
+    image: edge-sqlite-db:1.0.0
+    hostname: orders
+    ports:
+      - 29007:8080
+    environment:
+      DB_NAME: "orders"
+      BASE_URL: "http://localhost:29007"
+      HOSTNAME: "orders"
+      DISCOVERY: "server"
+      PLACEMENT: "false"
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    volumes:
+      - ./generate_data:/mnt/databases
+    networks:
+      - sqlite
+
+  sqlite-lineitem:
+    image: edge-sqlite-db:1.0.0
+    hostname: lineitem
+    ports:
+      - 29008:8080
+    environment:
+      DB_NAME: "lineitem"
+      BASE_URL: "http://localhost:29008"
+      HOSTNAME: "lineitem"
+      DISCOVERY: "server"
+      PLACEMENT: "false"
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    volumes:
+      - ./generate_data:/mnt/databases
+    networks:
+      - sqlite
+
+networks:
+  sqlite:
