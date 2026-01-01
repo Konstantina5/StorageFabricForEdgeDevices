@@ -1,16 +1,23 @@
 package com.thesis.sqlite.algorithm.streaming;
+
 import com.thesis.sqlite.components.streaming.StreamingTemplateService;
 import com.thesis.sqlite.dto.request.streaming.QueryTable;
-import io.confluent.ksql.api.client.*;
+import io.confluent.ksql.api.client.Client;
+import io.confluent.ksql.api.client.ExecuteStatementResult;
+import io.confluent.ksql.api.client.Row;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 @Component
+@ConditionalOnProperty(
+        value="streaming",
+        havingValue = "true")
 public class KafkaStreaming {
     private final Client client;
     private final StreamingTemplateService streamingTemplateService;

@@ -3,6 +3,7 @@ package com.thesis.sqlite.confs;
 import io.confluent.ksql.api.client.Client;
 import io.confluent.ksql.api.client.ClientOptions;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -13,6 +14,9 @@ public class KsqlDbConfig {
     private String ksqlDbUrl;
 
     @Bean
+    @ConditionalOnProperty(
+            value = "streaming",
+            havingValue = "true")
     public Client ksqlClient() {
         ClientOptions options = ClientOptions.create()
                 .setHost(ksqlDbUrl.replace("http://", "").split(":")[0])

@@ -5,6 +5,7 @@ import com.thesis.sqlite.dto.request.streaming.QueryTable;
 import io.confluent.ksql.api.client.Row;
 import io.confluent.ksql.api.client.TableInfo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.*;
 import io.confluent.ksql.api.client.Client;
 
@@ -13,6 +14,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @RestController
+@ConditionalOnProperty(
+        value="streaming",
+        havingValue = "true")
 @RequestMapping("api/streaming")
 public class StreamingController {
 
