@@ -8,7 +8,7 @@ services:
       - 29001:8080
     environment:
       DB_NAME: "region"
-      BASE_URL: "http://localhost:29001"
+      BASE_URL: "http://region:8080/api"
       HOSTNAME: "region"
       DISCOVERY: "server"
       CLUSTER_HEAD: "true"
@@ -26,11 +26,11 @@ services:
       - 29002:8080
     environment:
       DB_NAME: "nation"
-      BASE_URL: "http://localhost:29002"
+      BASE_URL: "http://nation:8080/api"
       HOSTNAME: "nation"
       DISCOVERY: "server"
       PLACEMENT: "false"
-      JAVA_OPTS: "-Xms512m -Xmx1g"
+      JAVA_OPTS: "-Xms512m -X1g"
     volumes:
       - ./generate_data:/mnt/databases
     networks:
@@ -43,7 +43,7 @@ services:
       - 29003:8080
     environment:
       DB_NAME: "part"
-      BASE_URL: "http://localhost:29003"
+      BASE_URL: "http://part:8080/api"
       HOSTNAME: "part"
       DISCOVERY: "server"
       PLACEMENT: "false"
@@ -60,7 +60,7 @@ services:
       - 29004:8080
     environment:
       DB_NAME: "supplier"
-      BASE_URL: "http://localhost:29004"
+      BASE_URL: "http://supplier:8080/api"
       HOSTNAME: "supplier"
       DISCOVERY: "server"
       PLACEMENT: "false"
@@ -77,7 +77,7 @@ services:
       - 29005:8080
     environment:
       DB_NAME: "partsupp"
-      BASE_URL: "http://localhost:29005"
+      BASE_URL: "http://partsupp:8080/api"
       HOSTNAME: "partsupp"
       DISCOVERY: "server"
       PLACEMENT: "false"
@@ -94,7 +94,7 @@ services:
       - 29006:8080
     environment:
       DB_NAME: "customer"
-      BASE_URL: "http://localhost:29006"
+      BASE_URL: "http://customer:8080/api"
       HOSTNAME: "customer"
       DISCOVERY: "server"
       PLACEMENT: "false"
@@ -111,7 +111,7 @@ services:
       - 29007:8080
     environment:
       DB_NAME: "orders"
-      BASE_URL: "http://localhost:29007"
+      BASE_URL: "http://orders:8080/api"
       HOSTNAME: "orders"
       DISCOVERY: "server"
       PLACEMENT: "false"
@@ -128,7 +128,7 @@ services:
       - 29008:8080
     environment:
       DB_NAME: "lineitem"
-      BASE_URL: "http://localhost:29008"
+      BASE_URL: "http://lineitem:8080/api"
       HOSTNAME: "lineitem"
       DISCOVERY: "server"
       PLACEMENT: "false"

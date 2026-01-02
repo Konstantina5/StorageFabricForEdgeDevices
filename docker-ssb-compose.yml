@@ -8,7 +8,7 @@ services:
       - 29001:8080
     environment:
       DB_NAME: "customer"
-      BASE_URL: "http://localhost:29001"
+      BASE_URL: "http://customer:8080/api"
       HOSTNAME: "customer"
       DISCOVERY: "server"
       CLUSTER_HEAD: "true"
@@ -26,7 +26,7 @@ services:
       - 29002:8080
     environment:
       DB_NAME: "supplier"
-      BASE_URL: "http://localhost:29002"
+      BASE_URL: "http://supplier:8080/api"
       HOSTNAME: "supplier"
       DISCOVERY: "server"
       PLACEMENT: "false"
@@ -43,7 +43,7 @@ services:
       - 29003:8080
     environment:
       DB_NAME: "part"
-      BASE_URL: "http://localhost:29003"
+      BASE_URL: "http://part:8080/api"
       HOSTNAME: "part"
       DISCOVERY: "server"
       PLACEMENT: "false"
@@ -59,8 +59,8 @@ services:
     ports:
       - 29004:8080
     environment:
-      DB_NAME: "date"
-      BASE_URL: "http://localhost:29004"
+      DB_NAME: "date_table"
+      BASE_URL: "http://date:8080/api"
       HOSTNAME: "date"
       DISCOVERY: "server"
       PLACEMENT: "false"
@@ -77,7 +77,7 @@ services:
       - 29005:8080
     environment:
       DB_NAME: "lineorder"
-      BASE_URL: "http://localhost:29005"
+      BASE_URL: "http://lineorder:8080/api"
       HOSTNAME: "lineorder"
       DISCOVERY: "server"
       PLACEMENT: "false"
