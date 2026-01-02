@@ -1,4 +1,4 @@
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jre
 COPY target/sqlite-spring-boot.jar /opt/assets/sqlite-spring-boot.jar
 WORKDIR /opt/assets
 ENV JAVA_OPTS_GC="-server -XX:+AlwaysPreTouch -XX:+UseG1GC -XX:+ScavengeBeforeFullGC -XX:+DisableExplicitGC"

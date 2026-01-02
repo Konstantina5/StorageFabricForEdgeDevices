@@ -1,5 +1,6 @@
 package com.thesis.sqlite.confs;
 
+import com.thesis.sqlite.utils.Utils;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.SparkSession;
 import org.springframework.context.annotation.Bean;
@@ -14,9 +15,19 @@ public class SparkConfig {
                 .setAppName("SpringBootSparkApp")
                 .setMaster("local[*]");
 
+//        return SparkSession.builder()
+//                .appName("Spring Boot Spark")
+//                .config(sparkConf)
+//                .getOrCreate();
+
         return SparkSession.builder()
-                .appName("Spring Boot Spark")
-                .config(sparkConf)
+                .appName("SpringBootSparkApp")
+                .master("spark://spark-master:7077")
+                .config("spark.driver.host", Utils.HOSTNAME)  // automatically uses container hostname
                 .getOrCreate();
+
+//        return SparkSession.builder()
+//                .remote("sc://spark-master:15002")
+//                .getOrCreate();
     }
 }

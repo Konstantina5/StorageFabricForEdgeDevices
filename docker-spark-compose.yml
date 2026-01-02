@@ -1,7 +1,8 @@
-version: '3'
+version: "3.8"
+
 services:
   spark-master:
-    image: bitnami/spark:latest
+    image: apache/spark:4.0.0-scala2.13-java17-ubuntu
     container_name: spark-master
     environment:
       - SPARK_MODE=master
@@ -9,36 +10,23 @@ services:
     ports:
       - "8080:8080"
       - "7077:7077"
+    command: [ "/bin/bash", "-c", "/opt/spark/bin/spark-class org.apache.spark.deploy.master.Master --host spark-master" ]
     networks:
-      - spark-net
-    volumes:
-      - ./data:/tmp/spark_data
+      - sqlite
 
   spark-worker-1:
-    image: bitnami/spark:latest
+    image: apache/spark:4.0.0-scala2.13-java17-ubuntu
     container_name: spark-worker-1
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
     depends_on:
       - spark-master
+    command: ["/bin/bash", "-c", "/opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077"]
     networks:
-      - spark-net
-    volumes:
-      - ./data:/tmp/spark_data
-
-  spark-worker-2:
-    image: bitnami/spark:latest
-    container_name: spark-worker-2
-    environment:
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark-master:7077
-    depends_on:
-      - spark-master
-    networks:
-      - spark-net
-    volumes:
-      - ./data:/tmp/spark_data
+      - sqlite
 
 networks:
-  spark-net:
+  sqlite:
+    external: true
+    name: spark-network
