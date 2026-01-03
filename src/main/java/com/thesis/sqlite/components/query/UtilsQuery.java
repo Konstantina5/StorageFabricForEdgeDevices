@@ -2,14 +2,10 @@ package com.thesis.sqlite.components.query;
 
 import com.thesis.sqlite.components.query.base.Join;
 import com.thesis.sqlite.components.query.base.Relation;
-import com.thesis.sqlite.components.query.traversal.XNode;
 import com.thesis.sqlite.dto.QueryResult;
 import com.thesis.sqlite.utils.Future;
 import com.thesis.sqlite.utils.Pair;
-import org.apache.commons.io.FileUtils;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -125,21 +121,6 @@ public class UtilsQuery {
         return null;
     }
 
-    public static Properties loadPropsFromFile(String propertiesFile) {
-
-        Properties prop = new Properties();
-
-        try (InputStream input = new FileInputStream(propertiesFile)) {
-
-            prop.load(input);
-
-
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-        return prop;
-    }
-
     //TODO k: maybe in the view add the common ids only on this server that tries to calculate the results
     public static CompletableFuture<List<Pair<String, Interactor>>> registerLocalViewsCF(ExternalInteractor interactor,
                                                                                          Map<String, String> tableDist,
@@ -164,39 +145,6 @@ public class UtilsQuery {
                 .thenApply(__ -> tableAnnotations);
     }
 
-    //assumes that all tables are available on system sysName
-    public static CompletableFuture<Void> updateRealCardinalitiesCF(String currStoredTable, Interactor interactor,
-                                                                    String url, Map<String, String> tableDist,
-                                                                    String query, Relation r, List<Join> joinGraph,
-                                                                    Collection<UUID> currentIds) {
-
-        try {
-            ArrayList<String> shortNames = new ArrayList<>(Arrays.asList(r.shortName.split("_")));
-            shortNames.remove(shortNames.get(0));
-
-            for (String shortName : shortNames) {
-                Relation rightRel = r.getComposedRelationByShortName(shortName);
-                String leftRelStr;
-                if (shortNames.indexOf(shortName) == shortNames.size() - 1) {
-                    leftRelStr = r.shortName.substring(0, r.shortName.lastIndexOf("_"));
-                } else
-                    leftRelStr = r.shortName.substring(0, r.shortName.indexOf("_" + rightRel.shortName + "_"));
-
-
-                Relation leftRel = r.getComposedRelationByShortName(leftRelStr);
-                Join rsj = leftRel.getJoin(rightRel, joinGraph);
-
-                interactor.registerJoinView(rsj.rhs.baseUrl, rsj.getJoinName(), rsj.lhs.shortName, rsj.rhs.shortName, rsj);
-                Relation joinRel = r.getComposedRelationByShortName(rsj.getJoinName());
-
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return CompletableFuture.completedFuture(null);
-    }
-
     public static HashMap<String, String> getAliasMap(String query) {
         String aliases = subStrBetween(query, "from", "where");
         String[] aliasArr = aliases.split(",");
@@ -213,18 +161,11 @@ public class UtilsQuery {
 
     }
 
-    public static HashMap<String, String> getInversedAliasMap(HashMap<String, String> aliasMap) {
-        HashMap<String, String> inversedAliasMap = new HashMap<>();
-        aliasMap.forEach((key, value) -> inversedAliasMap.put(value, key));
-        return inversedAliasMap;
-    }
-
     public static ArrayList<String> getJoinStr(String query) {
-
-
         ArrayList<String> joinStr = new ArrayList<>();
         try {
             String selPredStr = subStrBetween(query, "where", "group");
+            if(selPredStr == null) selPredStr = subStrBetween(query, "where", ";");
             //System.out.println(selPredStr);
             String[] selPreds = selPredStr.split(" and ");
 
@@ -278,15 +219,20 @@ public class UtilsQuery {
                     }
                 } else {
                     // Only this alias: keep as-is (but remove alias prefix)
-                    String cleaned = trimmed.replaceAll("(?i)\\b" + alias + "\\.", "");
-                    projections.add(cleaned);
+                    Set<String> aliasColumns = extractAliasColumns(trimmed, alias);
+                    for (String col : aliasColumns) {
+                        if (!projections.contains(col))
+                            projections.add(col);
+                    }
                 }
             }
         }
-        String projectionStr = String.join(", ", projections);
+//        String projectionStr = String.join(", ", projections);
 
 
         String selPredStr = subStrBetween(query, "where", "group");
+        if(selPredStr == null) selPredStr = subStrBetween(query, "where", ";");
+
         String[] selPreds = selPredStr.split(" and ");
         String delimiter2 = "";
         for (String selPred : selPreds) {
@@ -295,20 +241,22 @@ public class UtilsQuery {
             String rhs = selPredOps[1];
             if (!(lhs.contains(".") && rhs.contains("."))) {
 
-                if (lhs.split("\\.")[0].equals(alias) || rhs.split("\\.")[0].equals(alias)) {
+                if (lhs.split("\\.")[0].trim().equals(alias) || rhs.split("\\.")[0].trim().equals(alias)) {
                     selection.append(delimiter2).append(sanitize(selPred.replace(alias + ".", "")));
                     delimiter2 = " AND ";
                 }
 
             } else {
                 String attr = sanitize(lhs.split("\\.")[1]);
-                if (lhs.split("\\.")[0].equals(alias) && !projection.toString().contains(attr)) {
+                if (lhs.split("\\.")[0].trim().equals(alias) && !projection.toString().contains(attr)) {
                     projection.append(delimiter1).append(attr);
                     delimiter1 = ",";
+                    projections.add(attr);
                 }
-                attr = sanitize(rhs.split("\\.")[1]);
-                if (rhs.split("\\.")[0].equals(alias) && !projection.toString().contains(attr)) {
+                attr = sanitize(rhs.split("\\.")[1].trim());
+                if (rhs.split("\\.")[0].trim().equals(alias) && !projection.toString().contains(attr)) {
                     projection.append(delimiter1).append(attr);
+                    projections.add(attr);
                     delimiter1 = ",";
                 }
             }
@@ -317,6 +265,10 @@ public class UtilsQuery {
         if (!selection.isEmpty()) {
             selection.insert(0, " WHERE ");
         }
+
+        String projectionStr = projections.isEmpty()
+                ? "*"
+                : String.join(",", projections);
 
         String localView = "SELECT " + projectionStr + " FROM " + tableName + selection;
         return localView;
@@ -370,91 +322,6 @@ public class UtilsQuery {
                     .replace(")", "");
         else
             return str.replace("\n", "").replace(",", "");
-    }
-
-    public static String getResourceAsString(InputStream is) throws IOException {
-        StringBuilder sb = new StringBuilder();
-        try (InputStreamReader isr = new InputStreamReader(is);
-             BufferedReader br = new BufferedReader(isr);) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                sb.append(line).append("\n");
-            }
-            is.close();
-        }
-        return sb.toString();
-    }
-
-//    public static void printCalcitePlan(String header, RelNode relTree) {
-//        try {
-//            StringWriter sw = new StringWriter();
-//
-//            sw.append(header).append(":").append("\n");
-//
-//            RelWriterImpl relWriter = new RelWriterImpl(new PrintWriter(sw), SqlExplainLevel.ALL_ATTRIBUTES, true);
-//
-//            relTree.explain(relWriter);
-//
-//            System.out.println(sw);
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//    }
-
-    public static XNode constructOperatorTree(Relation r, ArrayList<Join> joinGraph) {
-        ArrayList<String> shortNames = new ArrayList<>(Arrays.asList(r.shortName.split("_")));
-
-        XNode nodePlan = new XNode(r.getComposedRelationByShortName(shortNames.get(0)));
-        shortNames.remove(shortNames.get(0));
-
-        for (String shortName : shortNames) {
-
-            Relation rightRel = r.getComposedRelationByShortName(shortName);
-            String leftRelStr;
-            if (shortNames.indexOf(shortName) == shortNames.size() - 1) {
-                leftRelStr = r.shortName.substring(0, r.shortName.lastIndexOf("_"));
-            } else
-                leftRelStr = r.shortName.substring(0, r.shortName.indexOf("_" + rightRel.shortName + "_"));
-
-            Relation leftRel = r.getComposedRelationByShortName(leftRelStr);
-
-            //System.out.println("Iteration  joining " + leftRelStr + " and " + rightRel);
-            XNode<Relation> rightNode = new XNode<>(rightRel);
-            Join rsj = leftRel.getJoin(rightRel, joinGraph);
-//            rsj.onDbms = r.getComposedRelationByShortName(rsj.getJoinName()).dbms;
-            XNode<Join> join = new XNode<>(rsj);
-            join.left = nodePlan;
-            join.right = rightNode;
-            nodePlan = join;
-
-        }
-        return nodePlan;
-    }
-
-    public static void printJoinTree(XNode node) {
-
-        if (node != null) {
-            printJoinTree(node.left);
-            printJoinTree(node.right);
-            if (node.data instanceof Join) {
-                System.out.println(node.data);
-
-            }
-        }
-    }
-
-    public static void writeJoinTreeToFile(XNode node, File f) throws IOException {
-
-        if (node != null) {
-
-            writeJoinTreeToFile(node.left, f);
-            writeJoinTreeToFile(node.right, f);
-            if (node.data instanceof Join) {
-                FileUtils.writeStringToFile(f, node.data.toString() + "\n", StandardCharsets.UTF_8, true);
-
-            }
-
-        }
     }
 
     public static QueryResult convertResultSetToList(ResultSet rs) {

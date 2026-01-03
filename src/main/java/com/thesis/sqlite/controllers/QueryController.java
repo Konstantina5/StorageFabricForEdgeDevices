@@ -108,8 +108,9 @@ public class QueryController {
     }
 
     @GetMapping("/metadata")
-    public ResponseEntity<List<Attribute>> getMetadata(@QueryParam("table") String table) {
+    public ResponseEntity<?> getMetadata(@QueryParam("table") String table) {
         List<Attribute> attributes = new ArrayList<>();
+        System.out.println("CONTROLLER [/metadata]: for table: " + table);
 
         try(Connection connection = Objects.requireNonNull(jdbcTemplate.getDataSource()).getConnection()) {
             try (Statement stmt = connection.createStatement()) {
@@ -132,9 +133,8 @@ public class QueryController {
 
         } catch (SQLException e) {
             e.printStackTrace();
-            throw new RuntimeException(e);
+            return Client.Errors.internalServerError(e.getMessage());
         }
-
         return Client.Results.ok(attributes);
     }
 

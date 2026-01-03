@@ -97,9 +97,7 @@ public class KafkaStreaming {
 
         return  client.executeStatement(String.format("DROP TABLE IF EXISTS %s;", queryTable.tableName()))
                 .thenCompose(__ -> client.executeStatement(String.format("""
-                    CREATE TABLE %s AS
-                        %s
-                        EMIT CHANGES;
+                    CREATE TABLE %s AS %s
                     """, queryTable.tableName(), queryTable.query())));
     }
 

@@ -90,7 +90,7 @@ public class ExternalInteractor implements Interactor {
     }
 
     private <T> CompletableFuture<ResponseEntity<GetAllResult>> fetchPage(String url, String tableName, int page, int size) {
-        URI uri = UriComponentsBuilder.fromUriString(url + "/get_all")
+        URI uri = UriComponentsBuilder.fromUriString(url + "/query/get_all")
                 .queryParam("tableName", tableName)
                 .queryParam("page", page)
                 .queryParam("size", size)

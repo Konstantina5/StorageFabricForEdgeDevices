@@ -30,5 +30,9 @@ public interface Client {
         static ResponseEntity<Void> unprocessableEntity() {
             return new ResponseEntity<>(HttpStatus.UNPROCESSABLE_ENTITY);
         }
+
+        static ResponseEntity<String> internalServerError(String message) {
+            return new ResponseEntity<>(message, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }
