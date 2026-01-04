@@ -48,6 +48,7 @@ services:
     ports:
       - "8088:8088"   # ksqlDB server REST API
     environment:
+      KAFKA_READY_TIMEOUT_MS: 30000
       KSQL_CONFIG_DIR: "/etc/ksql"
       KSQL_BOOTSTRAP_SERVERS: "kafka:29092"
       KSQL_LISTENERS: "http://0.0.0.0:8088"

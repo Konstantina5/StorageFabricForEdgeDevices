@@ -10,4 +10,8 @@ public abstract class ImplementationTypeManager {
     public CompletableFuture<Dataset<Row>> performAlgorithm(String sqlQuery) {
         throw new RuntimeException();
     }
+
+    public String getLocalView(String sqlQuery) {
+        throw new RuntimeException();
+    }
 }

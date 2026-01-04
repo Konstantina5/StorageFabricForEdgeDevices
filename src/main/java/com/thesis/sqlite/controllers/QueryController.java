@@ -2,6 +2,7 @@ package com.thesis.sqlite.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.thesis.sqlite.algorithm.modules.base.ImplementationTypeManager;
 import com.thesis.sqlite.components.ResultSetSerializer;
 import com.thesis.sqlite.components.query.ExternalInteractor;
 import com.thesis.sqlite.components.query.UtilsQuery;
@@ -33,17 +34,19 @@ import static com.thesis.sqlite.components.query.UtilsQuery.filterQueryByTables;
 public class QueryController {
     private final JdbcTemplate jdbcTemplate;
     private final ExternalInteractor externalInteractor;
+    private final ImplementationTypeManager implementation;
 
     @Autowired
-    public QueryController(JdbcTemplate jdbcTemplate, ExternalInteractor externalInteractor) {
+    public QueryController(JdbcTemplate jdbcTemplate, ExternalInteractor externalInteractor, ImplementationTypeManager implementation) {
         this.jdbcTemplate = jdbcTemplate;
         this.externalInteractor = externalInteractor;
+        this.implementation = implementation;
     }
 
     @GetMapping("/get_all")
     public ResponseEntity<GetAllResult> getAll(String tableName, Pageable pageable) {
         try(Connection connection = Objects.requireNonNull(jdbcTemplate.getDataSource()).getConnection()) {
-            String query = "SELECT * FROM " + tableName + " LIMIT ? offset ?";
+            String query = implementation.getLocalView(tableName) + " LIMIT ? offset ?";
             PreparedStatement preparedStatement = connection.prepareStatement(query);
             preparedStatement.setInt(1, pageable.getPageSize());
             preparedStatement.setLong(2, pageable.getOffset());
@@ -103,8 +106,8 @@ public class QueryController {
                                 .map(ResponseEntity::getBody)
                                 .ifPresent(body -> externalInteractor.createTableFromResultSet(body, pair.getKey().split("_")[1]))))
                 .thenApply(__ -> execute(joinRequestBody))
-                .thenApply(tt -> UtilsQuery.convertResultSetToList(tt))
-                .thenApply(rr -> Client.Results.ok(rr));
+                .thenApply(UtilsQuery::convertResultSetToList)
+                .thenApply(Client.Results::ok);
     }
 
     @GetMapping("/metadata")

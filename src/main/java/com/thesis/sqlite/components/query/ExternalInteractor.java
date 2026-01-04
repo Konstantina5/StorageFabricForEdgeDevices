@@ -1,17 +1,22 @@
 package com.thesis.sqlite.components.query;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.thesis.sqlite.components.query.base.Attribute;
 import com.thesis.sqlite.components.query.base.Join;
 import com.thesis.sqlite.components.query.base.Relation;
+import com.thesis.sqlite.components.query.base.Type;
 import com.thesis.sqlite.components.spark.DatasetsUtils;
 import com.thesis.sqlite.components.spark.SparkService;
 import com.thesis.sqlite.dto.QueryResult;
 import com.thesis.sqlite.dto.join.JoinDto;
+import com.thesis.sqlite.dto.request.CreateView;
 import com.thesis.sqlite.dto.request.GetAllResult;
 import com.thesis.sqlite.dto.request.JoinRequestBody;
 import com.thesis.sqlite.utils.PaginationUtil;
 import com.thesis.sqlite.utils.Pair;
+import com.thesis.sqlite.utils.Utils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -114,6 +119,17 @@ public class ExternalInteractor implements Interactor {
                 taskExecutor);
     }
 
+    public CompletableFuture<ResponseEntity<Void>> executeCreateViewCF(String url, CreateView body) {
+        return CompletableFuture.supplyAsync(() ->
+                        restClient.post()
+                                .uri(url + "/query/execute/view")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .body(body)
+                                .retrieve()
+                                .toBodilessEntity(),
+                taskExecutor);
+    }
+
     public <T> CompletableFuture<ResponseEntity<T>> executeQueryCF(String url, String query, Class<T> clazz) {
         return CompletableFuture.supplyAsync(() ->
                         restClient.post()
@@ -166,6 +182,7 @@ public class ExternalInteractor implements Interactor {
 
         System.out.println("\nCREATE LOCAL VIEW: " + localView);
 
+        jdbcTemplate.execute("PRAGMA journal_mode=WAL;");
 
         jdbcTemplate.execute(dropView);
         jdbcTemplate.execute(localView);
@@ -271,13 +288,52 @@ public class ExternalInteractor implements Interactor {
 
     }
 
+    public Relation getLocalRelationShips(Map<String, String> tableAnnotations) {
+        List<Attribute> attributes = new ArrayList<>();
+        System.out.println("getLocalRelationShips: 1 ");
+        try(Connection connection = Objects.requireNonNull(jdbcTemplate.getDataSource()).getConnection()) {
+            try (Statement stmt = connection.createStatement()) {
+                ResultSet rs = stmt.executeQuery("select * from " + Utils.TABLE_NAME + " where 1=0");
+                System.out.println("getLocalRelationShips: 2 ");
+
+                ResultSetMetaData rsMetaData = rs.getMetaData();
+
+                for (int i = 1; i <= rsMetaData.getColumnCount(); i++) {
+                    String attrName = rsMetaData.getColumnName(i);
+                    int columnType = rsMetaData.getColumnType(i);
+
+//                    String sqlCountDistinct = String.format("SELECT COUNT(DISTINCT %s) FROM %s", attrName, Utils.TABLE_NAME);
+//                    System.out.println("getLocalRelationShips: " + sqlCountDistinct);
+//                    Long count = jdbcTemplate.queryForObject(sqlCountDistinct, Long.class);
+//
+//                    System.out.println("getLocalRelationShips:  count" + count);
+                    Long count = 100L;
+                    Type type = columnType == Types.OTHER ? Type.UUID : Type.CHAR; // TODO k: fix
+
+                    Attribute attr = new Attribute(attrName.toLowerCase().replaceAll("\"", ""), count, type);
+                    attributes.add(attr);
+                }
+                System.out.println("getLocalRelationShips: 3 ");
+            }
+
+        } catch (SQLException e) {
+            System.out.println("getLocalRelationShips: " + e.getMessage());
+        }
+
+        Relation r = new Relation(Utils.BASE_URL, Utils.TABLE_NAME, tableAnnotations.get(Utils.TABLE_NAME), 100L, true); //TODO k: get correct size
+        r.addAttributes(attributes);
+        r.addComposedOf(r);
+        System.out.println("getLocalRelationShips: " + attributes.size());
+        return r;
+    }
+
     //TODO k: should find the external table let's say it would be put in tableB maybe?
     @Override
     public CompletableFuture<Pair<String, String>> registerJoinView(String url, String viewName, String tableA, String tableB, Join joinOn) {
         Map<Attribute, List<Object>> propertyMap = joinOn.predicate.stream()
                 .map(pre -> {
                     List<Object> values = jdbcTemplate.query(
-                            "SELECT " + pre.getLeft().getName() + " FROM " + tableA,
+                            "SELECT " + pre.getLeft().getName() + " FROM " + tableA + " LIMIT 100001",
                             (rs, rowNum) -> {
                                 Object value = rs.getObject(pre.getLeft().getName());
                                 if (value instanceof byte[] bytes) {
@@ -308,7 +364,14 @@ public class ExternalInteractor implements Interactor {
                         + entry.getValue().stream().map(String::valueOf).collect(Collectors.joining("','")) + "')")
                 .collect(Collectors.joining(" and "));
 
-        String joinView = "CREATE VIEW " + viewName + " AS SELECT * FROM " + tableB + " WHERE " + where;
+        Map<String, List<String>> where2 = propertyMap.entrySet().stream()
+                .collect(Collectors.toMap(entry -> entry.getKey().getName(), entry -> entry.getValue().stream().map(String::valueOf).toList()));
+
+        CreateView createView = new CreateView(viewName, tableB, where2);
+        //8634145
+        String joinView = (where.length() > 100000)
+                ? "CREATE VIEW " + viewName + " AS SELECT * FROM " + tableB
+                : "CREATE VIEW " + viewName + " AS SELECT * FROM " + tableB + " WHERE " + where;
 
         System.out.println("Filtered view: " + joinView);
 
@@ -391,6 +454,27 @@ public class ExternalInteractor implements Interactor {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public List<JsonNode> fetchBatch(String tableName, int limit, int offset) {
+        String sql = "SELECT * FROM %s LIMIT ? OFFSET ?".formatted(tableName);
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        return jdbcTemplate.query(sql, rs -> {
+            List<JsonNode> result = new ArrayList<>();
+            ResultSetMetaData meta = rs.getMetaData();
+            int columnCount = meta.getColumnCount();
+
+            while (rs.next()) {
+                ObjectNode node = mapper.createObjectNode();
+                for (int i = 1; i <= columnCount; i++) {
+                    node.put(meta.getColumnName(i), rs.getString(i));
+                }
+                result.add(node);
+            }
+            return result;
+        }, limit, offset);
     }
 
     @Override
