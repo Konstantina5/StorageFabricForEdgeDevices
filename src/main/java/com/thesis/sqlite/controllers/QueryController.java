@@ -14,6 +14,7 @@ import com.thesis.sqlite.dto.request.JoinRequestBody;
 import com.thesis.sqlite.results.Client;
 import com.thesis.sqlite.utils.Future;
 import com.thesis.sqlite.utils.Pair;
+import com.thesis.sqlite.utils.Utils;
 import jakarta.ws.rs.QueryParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
@@ -44,10 +45,27 @@ public class QueryController {
     }
 
     @GetMapping("/get_all")
-    public ResponseEntity<GetAllResult> getAll(String tableName, Pageable pageable) {
+    public ResponseEntity<GetAllResult> getAll(String query, Pageable pageable) {
+
         try(Connection connection = Objects.requireNonNull(jdbcTemplate.getDataSource()).getConnection()) {
-            String query = implementation.getLocalView(tableName) + " LIMIT ? offset ?";
-            PreparedStatement preparedStatement = connection.prepareStatement(query);
+            String countQuery = "SELECT COUNT(*) as total FROM (" + implementation.getLocalView(query) + ")";
+            int total = 0;
+            try (PreparedStatement countStmt = connection.prepareStatement(countQuery)) {
+                ResultSet countRs = countStmt.executeQuery();
+                if (countRs.next()) {
+                    total = countRs.getInt("total");
+                }
+            }
+            DatabaseMetaData metaData = connection.getMetaData();
+            ResultSet rs = metaData.getPrimaryKeys(null, null, Utils.TABLE_NAME);
+            String firstColumn = null;
+            if (rs.next()) {  // only the first column
+                firstColumn = rs.getString("COLUMN_NAME");
+            }
+
+            String view = implementation.getLocalView(query) + " order by " + firstColumn + " LIMIT ? offset ?";
+
+            PreparedStatement preparedStatement = connection.prepareStatement(view);
             preparedStatement.setInt(1, pageable.getPageSize());
             preparedStatement.setLong(2, pageable.getOffset());
 
@@ -61,7 +79,7 @@ public class QueryController {
 
             GetAllResult getAllResult = new GetAllResult(objectMapper.valueToTree(resultSet));
 
-            return Client.Results.ok(getAllResult);
+            return Client.Results.paged(getAllResult, total, pageable.getPageSize());
 
         } catch(SQLException e){
             throw new RuntimeException();

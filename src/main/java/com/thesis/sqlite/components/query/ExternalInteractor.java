@@ -50,9 +50,9 @@ public class ExternalInteractor implements Interactor {
         this.registeredJoinViews = new HashMap<>();
     }
 
-    public CompletableFuture<Dataset<Row>> getAllPaged(SparkService sparkService, String url, String tableName) {
+    public CompletableFuture<Dataset<Row>> getAllPaged(SparkService sparkService, String url, String query) {
         CompletableFuture<Dataset<Row>> futures =
-                fetchAllPagesFor((page, size) -> fetchPage(url, tableName, page, size))
+                fetchAllPagesFor((page, size) -> fetchPage(url, query, page, size))
                         .thenApply(res -> DatasetsUtils.createDataset(sparkService.getSpark(), res)
                                         .toDF());
 
@@ -88,9 +88,9 @@ public class ExternalInteractor implements Interactor {
                 });
     }
 
-    private <T> CompletableFuture<ResponseEntity<GetAllResult>> fetchPage(String url, String tableName, int page, int size) {
+    private <T> CompletableFuture<ResponseEntity<GetAllResult>> fetchPage(String url, String query, int page, int size) {
         URI uri = UriComponentsBuilder.fromUriString(url + "/query/get_all")
-                .queryParam("tableName", tableName)
+                .queryParam("query", query)
                 .queryParam("page", page)
                 .queryParam("size", size)
                 .build().toUri();
