@@ -20,36 +20,7 @@ public interface Interactor {
 
     CompletableFuture<Pair<String, String>> registerJoinView(String url, String viewName, String tableA, String tableB, Join joinOn);
 
-    void registerForeignTable(String systemName, String tableName);
-
-    boolean registerLocalMaterializedView(String viewName, String query);
-
-    void executeQuery(String query);
-
     String executeQueryAndPrintResult(String query) throws ClassNotFoundException;
 
-    long getQueryCost(String query);
-
-    void createDummyTable(String tableName, Relation r);
-
-    void updateStatistics(String tableName, Relation r, boolean analyze);
-
-    Pair<Connection, ResultSet> executeQueryAndReturnRS(String query) throws SQLException;
-
-    String getSystemName();
-
-    HashMap<String, Long> getAttributes(String tableName);
-
     Long getTableSize(String tableName);
-
-    //TODO: merge views with joinviews
-    ArrayList<String> getRegisteredViews();
-
-    ArrayList<String> getRegisteredJoinViews();
-
-    ArrayList<String> getRegisteredTables();
-
-    ArrayList<String> getRegisteredForeignTables();
-
-    void cleanUp();
 }
