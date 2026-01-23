@@ -54,6 +54,13 @@ public class Views {
 
         return UtilsQuery.registerLocalViewsCF(externalInteractor, collect, sqlQuery, Utils.TABLE_NAME)
                 .thenCompose(tableAnnotations -> getBaseRelationsCF(externalInteractor, collect, aliasMap, true)
+                        .thenApply(relations -> {
+                            //add relations for local table
+                            ArrayList<Relation> baseRelations = new ArrayList<>(relations);
+                            baseRelations.add(externalInteractor.getLocalRelationShips(aliasMap));
+
+                            return baseRelations;
+                        })
                         .thenCompose(baseRelations -> {
                             // the joins in the left they always have the current table,
                             // and if table is not currently present then they are lexicography sorted with the greater being on the left

@@ -20,6 +20,11 @@ public interface Client {
                                                                                                 List<TransformedDataType> transformedDataTypes) {
             return new ResponseEntity<>(transformedDataTypes, com.thesis.sqlite.utils.PaginationUtil.generateHeaders(data), HttpStatus.OK);
         }
+
+
+        static <ModelType> ResponseEntity<ModelType> paged(ModelType data, long totalElements, int pageSize) {
+            return new ResponseEntity<>(data, com.thesis.sqlite.utils.PaginationUtil.generateHeaders(totalElements, pageSize), HttpStatus.OK);
+        }
     }
 
     interface Errors {

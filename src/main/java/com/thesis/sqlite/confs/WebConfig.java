@@ -28,8 +28,8 @@ public class WebConfig {
     public Executor customTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(10);
-        executor.setMaxPoolSize(50);
-        executor.setQueueCapacity(100);
+        executor.setMaxPoolSize(200);
+        executor.setQueueCapacity(1000);
         executor.initialize();
         return executor;
     }
