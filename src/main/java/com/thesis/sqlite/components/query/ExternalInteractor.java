@@ -102,6 +102,17 @@ public class ExternalInteractor implements Interactor {
                 taskExecutor);
     }
 
+    public  <T> CompletableFuture<ResponseEntity<Void>> pushDataToKafka(String url, Integer dataAmount) {
+        return CompletableFuture.supplyAsync(() ->
+                        restClient.post()
+                                .uri(url + "/streaming/generate_data")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .body(dataAmount)
+                                .retrieve()
+                                .toBodilessEntity(),
+                taskExecutor);
+    }
+
     public CompletableFuture<ResponseEntity<Void>> executeQueryCF(String url, String query) {
         return CompletableFuture.supplyAsync(() ->
                         restClient.post()

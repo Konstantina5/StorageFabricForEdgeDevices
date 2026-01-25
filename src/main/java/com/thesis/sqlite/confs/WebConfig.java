@@ -1,10 +1,8 @@
 package com.thesis.sqlite.confs;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestTemplate;

@@ -1,18 +1,24 @@
 package com.thesis.sqlite.algorithm.streaming;
 
+import com.thesis.sqlite.components.NodesInfoManager;
+import com.thesis.sqlite.components.query.ExternalInteractor;
+import com.thesis.sqlite.components.streaming.GenerateData;
 import com.thesis.sqlite.components.streaming.StreamingTemplateService;
 import com.thesis.sqlite.dto.request.streaming.QueryTable;
+import com.thesis.sqlite.utils.Future;
+import com.thesis.sqlite.utils.Pair;
 import io.confluent.ksql.api.client.Client;
 import io.confluent.ksql.api.client.ExecuteStatementResult;
-import io.confluent.ksql.api.client.Row;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+
+import static com.thesis.sqlite.utils.Utils.TABLE_NAME;
 
 @Component
 @ConditionalOnProperty(
@@ -21,123 +27,55 @@ import java.util.concurrent.ExecutionException;
 public class KafkaStreaming {
     private final Client client;
     private final StreamingTemplateService streamingTemplateService;
+    private final NodesInfoManager infoManager;
+    private final ExternalInteractor externalInteractor;
+    private final GenerateData generateData;
 
     @Autowired
-    public KafkaStreaming(Client client, StreamingTemplateService streamingTemplateService) {
+    public KafkaStreaming(Client client, StreamingTemplateService streamingTemplateService, NodesInfoManager infoManager,
+                          ExternalInteractor externalInteractor, GenerateData generateData) {
         this.client = client;
         this.streamingTemplateService = streamingTemplateService;
+        this.infoManager = infoManager;
+        this.externalInteractor = externalInteractor;
+        this.generateData = generateData;
     }
 
     public CompletableFuture<ExecuteStatementResult> initialize() {
         return CompletableFuture.supplyAsync(streamingTemplateService::loadKafkaStreamTemplate)
-                .thenCompose(client::executeStatement);
+                .thenCompose(str -> client.executeStatement(str));
     }
 
-    public void createStreamsAndTables() throws InterruptedException, ExecutionException {
-        // Create ORDERS stream
-        client.executeStatement("""
-            CREATE STREAM IF NOT EXISTS orders (
-              product_id INT,
-              quantity INT
-            ) WITH (
-              KAFKA_TOPIC='orders',
-              VALUE_FORMAT='JSON',
-              PARTITIONS=1,
-              REPLICAS=1
-            );
-        """).get();
+    public CompletableFuture<List<ResponseEntity<Void>>> sendDataForAllTablesInTheQuery(String query, Integer dataAmount) {
+        Set<String> tables = getTableMap(query);
 
-        // Create INVENTORY table
-        client.executeStatement("""
-            CREATE TABLE IF NOT EXISTS inventory (
-              product_id INT PRIMARY KEY,
-              stock_level INT
-            ) WITH (
-              KAFKA_TOPIC='inventory',
-              VALUE_FORMAT='JSON',
-              PARTITIONS=1,
-              REPLICAS=1
-            );
-        """).get();
+        boolean b = tables.stream()
+//                .filter(key -> !key.equals(Utils.TABLE_NAME)) TODO k: uncomment when QueryHandler is ready
+                .allMatch(infoManager.getTableInfos()::containsKey);
 
-        // Create the JOIN stream
-        client.executeStatement("""
-            CREATE STREAM IF NOT EXISTS enriched_orders AS
-              SELECT o.product_id,
-                     o.quantity,
-                     i.stock_level
-              FROM orders o
-              LEFT JOIN inventory i ON o.product_id = i.product_id
-              EMIT CHANGES;
-        """).get();
+        if (!b) {
+            throw new RuntimeException("Not all tables are present, cannot execute query");
+        }
 
-        client.executeStatement("DROP TABLE IF EXISTS enriched_orders_table;").get();
+        generateData.sendBatch(Optional.ofNullable(dataAmount));
 
-        client.executeStatement("""
-                CREATE TABLE enriched_orders_table AS
-                    SELECT
-                      O.PRODUCT_ID AS PRODUCT_ID,
-                      SUM(O.QUANTITY) AS TOTAL_QUANTITY,
-                      MAX(I.STOCK_LEVEL) AS STOCK_LEVEL
-                    FROM orders O
-                    LEFT JOIN inventory I ON O.PRODUCT_ID = I.PRODUCT_ID
-                    GROUP BY O.PRODUCT_ID
-                    EMIT CHANGES;
-         """).get();
+        Map<String, String> collect = tables.stream()
+                .filter(table -> !table.equals(TABLE_NAME))
+                .map(s -> new Pair<>(s, Optional.ofNullable(infoManager.getTableInfos().get(s))))
+                .filter(entry -> entry.getValue().isPresent())
+                .map(pair -> new Pair<>(pair.getKey(), pair.getValue().get()))
+                .collect(Collectors.toMap(Pair::getKey, p -> p.getValue().getUrl()));
+
+        return Future.allOf(collect.values().stream()
+                .map(url -> externalInteractor.pushDataToKafka(url, dataAmount))
+                .toList());
     }
 
     public CompletableFuture<ExecuteStatementResult> createQueryTable(QueryTable queryTable) {
-//        SELECT
-//        O.PRODUCT_ID AS PRODUCT_ID,
-//                SUM(O.QUANTITY) AS TOTAL_QUANTITY,
-//        MAX(I.STOCK_LEVEL) AS STOCK_LEVEL
-//        FROM orders O
-//        LEFT JOIN inventory I ON O.PRODUCT_ID = I.PRODUCT_ID
-//        GROUP BY O.PRODUCT_ID
-
-        return  client.executeStatement(String.format("DROP TABLE IF EXISTS %s;", queryTable.tableName()))
+        return  client.executeStatement(String.format("DROP TABLE IF EXISTS %s;", queryTable.getTableName()))
                 .thenCompose(__ -> client.executeStatement(String.format("""
                     CREATE TABLE %s AS %s
-                    """, queryTable.tableName(), queryTable.query())));
-    }
-
-    public void streamEnrichedOrders() {
-        client.streamQuery("SELECT * FROM enriched_orders_table EMIT CHANGES;")
-                .thenAccept(streamedResult -> streamedResult.subscribe(new Subscriber<Row>() {
-                    private Subscription subscription;
-
-                    @Override
-                    public void onSubscribe(Subscription s) {
-                        this.subscription = s;
-                        s.request(Long.MAX_VALUE);
-                    }
-
-                    @Override
-                    public void onNext(Row row) {
-                        try {
-                            String product = row.getValue("PRODUCT_ID").toString();
-                            Integer quantity = row.getInteger("TOTAL_QUANTITY"); // match table column
-                            Integer stock = row.getInteger("STOCK_LEVEL");
-                            System.out.println("Enriched order → product=" + product +
-                                    " quantity=" + quantity +
-                                    " stock=" + stock);
-                        } catch (Exception ex) {
-                            System.err.println("Failed to parse row: " + ex.getMessage());
-                        }
-                    }
-
-                    @Override
-                    public void onError(Throwable t) {
-                        System.err.println("Stream error: " + t.getMessage());
-                        t.printStackTrace();
-                    }
-
-                    @Override
-                    public void onComplete() {
-                        System.out.println("Stream completed.");
-                    }
-                }));
-
+                    """, queryTable.getTableName(), queryTable.getQuery())));
     }
 
     public CompletableFuture<Void> getPushQueryResults(String tableName) {
@@ -151,4 +89,35 @@ public class KafkaStreaming {
                     return null;
                 });
     }
+
+    private static Set<String> getTableMap(String query) {
+        String lower = query.toLowerCase();
+
+        int fromIdx = lower.indexOf("from");
+        if (fromIdx == -1) {
+            return Set.of();
+        }
+
+        int whereIdx = lower.indexOf("where", fromIdx);
+        int groupByIdx = lower.indexOf("group by", fromIdx);
+
+        int endIdx;
+        if (whereIdx != -1 && groupByIdx != -1) {
+            endIdx = Math.min(whereIdx, groupByIdx);
+        } else if (whereIdx != -1) {
+            endIdx = whereIdx;
+        } else if (groupByIdx != -1) {
+            endIdx = groupByIdx;
+        } else {
+            endIdx = query.length();
+        }
+
+        String aliases = query.substring(fromIdx + 4, endIdx).trim();
+        String[] aliasArr = aliases.split(",");
+
+        return Arrays.stream(aliasArr)
+                .map(String::trim)
+                .collect(Collectors.toSet());
+    }
+
 }

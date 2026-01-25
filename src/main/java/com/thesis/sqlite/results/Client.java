@@ -36,7 +36,7 @@ public interface Client {
             return new ResponseEntity<>(HttpStatus.UNPROCESSABLE_ENTITY);
         }
 
-        static ResponseEntity<String> internalServerError(String message) {
+        static ResponseEntity<?> internalServerError(String message) {
             return new ResponseEntity<>(message, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

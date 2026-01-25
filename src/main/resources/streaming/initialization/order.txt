@@ -1,6 +1,7 @@
 CREATE STREAM IF NOT EXISTS orders (
       product_id INT,
-      quantity INT
+      quantity INT,
+      description STRING
     ) WITH (
       KAFKA_TOPIC='orders',
       VALUE_FORMAT='JSON',

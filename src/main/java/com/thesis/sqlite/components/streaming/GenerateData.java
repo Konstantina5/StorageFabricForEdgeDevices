@@ -1,32 +1,29 @@
 package com.thesis.sqlite.components.streaming;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.thesis.sqlite.components.query.ExternalInteractor;
 import com.thesis.sqlite.messages.kafka.base.KafkaMessage;
 import com.thesis.sqlite.services.LocalDataService;
 import com.thesis.sqlite.utils.Utils;
+import jakarta.inject.Singleton;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Optional;
 
 @Component
-@ConditionalOnProperty(
-        value="streaming.data.auto-generate",
-        havingValue = "true")
-public class ProduceData {
-    private static final int BATCH_SIZE = 10;
+@Singleton
+public class GenerateData {
+    private static final int BATCH_SIZE = 1000;
 
     private final ApplicationEventPublisher eventPublisher;
     private final LocalDataService localDataService;
     private int offset = 0;
 
     @Autowired
-    public ProduceData(ApplicationEventPublisher eventPublisher,
-                       LocalDataService localDataService) {
+    public GenerateData(ApplicationEventPublisher eventPublisher,
+                        LocalDataService localDataService) {
         this.eventPublisher = eventPublisher;
         this.localDataService = localDataService;
     }
@@ -37,9 +34,9 @@ public class ProduceData {
         eventPublisher.publishEvent(kafkaMessage);
     }
 
-    @Scheduled(fixedRate = 2000)
-    public void sendBatch() {
-        List<JsonNode> batch = localDataService.fetchBatch(Utils.TABLE_NAME, BATCH_SIZE, offset);
+    public void sendBatch(Optional<Integer> amount) {
+        int batchSize = amount.orElse(BATCH_SIZE);
+        List<JsonNode> batch = localDataService.fetchBatch(Utils.TABLE_NAME, batchSize, offset);
 
         // restart when table is exhausted
         if (batch.isEmpty()) {
@@ -49,10 +46,10 @@ public class ProduceData {
 
         batch.forEach(this::sendMessage);
 
-        offset += BATCH_SIZE;
+        offset += batchSize;
 
         // safety reset
-        if (batch.size() < BATCH_SIZE) {
+        if (batch.size() < batchSize) {
             offset = 0;
         }
     }
