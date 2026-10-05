@@ -1,6 +1,6 @@
 ## Requirements
 
-- Java 21 (openjdk 21.0.2)
+- Java 17
 - Apache Maven 3.9.6
 - Docker version 24.0.7
 
