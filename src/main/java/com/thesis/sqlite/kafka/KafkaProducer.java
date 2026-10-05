@@ -1,9 +1,11 @@
 package com.thesis.sqlite.kafka;
 
 import com.thesis.sqlite.messages.kafka.base.KafkaMessage;
+import com.thesis.sqlite.messages.kafka.base.KafkaMessageWithKey;
 import com.thesis.sqlite.utils.JsonUtil;
 import com.thesis.sqlite.utils.Utils;
 import lombok.AllArgsConstructor;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.context.event.EventListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -27,9 +29,22 @@ public class KafkaProducer {
         Utils.LOGGER.info("Message sent: {}", request);
     }
 
+    private  <T> void sendMessage(String key, String topic, String message) {
+        String request = jsonUtil.toString(message);
+        ProducerRecord<String, String> record = new ProducerRecord<>(topic, key, message);
+        kafkaTemplate.send(record);
+        Utils.LOGGER.info("Message sent: {}", request);
+    }
+
+
     @EventListener
     public void onKafkaMessageSend(KafkaMessage<?> message) {
         sendMessage(message.getTopic(), message.getMessage());
+    }
+
+    @EventListener
+    public void onKafkaMessageWithKeySend(KafkaMessageWithKey<?> message) {
+        sendMessage(message.getKey(), message.getTopic(), message.getMessage().toString());
     }
 
 }

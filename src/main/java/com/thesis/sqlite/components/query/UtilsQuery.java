@@ -95,7 +95,7 @@ public class UtilsQuery {
                     j.lhs = r;
                     j.rhs = s;
                 } else {
-                    if(r.shortName.compareTo(s.name) >= 0) {
+                    if(r.compareTo(s) >= 0) { //TODO k: check
                         j.addPredicate(r.getAttribute(lhsAttr), s.getAttribute(rhsAttr));
                         j.lhs = r;
                         j.rhs = s;
