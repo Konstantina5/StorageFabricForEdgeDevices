@@ -102,7 +102,7 @@ public class Views {
         return externalInteractor.executeQueryAndPrintResult(finalQuery);
     }
 
-    private static String rewriteFromClause(String sql) {
+    public static String rewriteFromClause(String sql) {
         String myTableAlias = Optional.ofNullable(UtilsQuery.getAliasMap(sql).get(Utils.TABLE_NAME)).orElse(Utils.TABLE_NAME);
         String lower = sql.toLowerCase();
 

@@ -19,6 +19,7 @@ public class KsqlDbConfig {
             havingValue = "true")
     public Client ksqlClient() {
         ClientOptions options = ClientOptions.create()
+                .setExecuteQueryMaxResultRows(50000) // Increase to 50k
                 .setHost(ksqlDbUrl.replace("http://", "").split(":")[0])
                 .setPort(Integer.parseInt(ksqlDbUrl.split(":")[2]));
         return Client.create(options);

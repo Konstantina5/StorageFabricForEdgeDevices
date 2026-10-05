@@ -22,6 +22,8 @@ import java.util.stream.Collectors;
 public class StreamingTemplateService {
     @Value( "${streaming.files-prefix}" )
     private String filesPrefix;
+    @Value( "${streaming.file-path}" )
+    private String filePath;
     @Autowired
     private JsonUtil jsonUtil;
     @Autowired
@@ -29,7 +31,7 @@ public class StreamingTemplateService {
     private static final Random RANDOM = new Random();
 
     private String loadJsonDataTemplate() {
-        String format = String.format("classpath:streaming/data/%s_template.json", filesPrefix);
+        String format = String.format("classpath:streaming/data/%s_template.json", filePath);
         Resource resource = resourceLoader.getResource(format);
         try {
             return new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);

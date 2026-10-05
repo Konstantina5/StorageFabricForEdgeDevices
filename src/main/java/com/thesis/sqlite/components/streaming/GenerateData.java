@@ -2,6 +2,7 @@ package com.thesis.sqlite.components.streaming;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.thesis.sqlite.messages.kafka.base.KafkaMessage;
+import com.thesis.sqlite.messages.kafka.base.KafkaMessageWithKey;
 import com.thesis.sqlite.services.LocalDataService;
 import com.thesis.sqlite.utils.Utils;
 import jakarta.inject.Singleton;
@@ -29,9 +30,21 @@ public class GenerateData {
     }
 
     private void sendMessage(JsonNode message) {
-        KafkaMessage<JsonNode> kafkaMessage =
-                new KafkaMessage<>(Utils.TABLE_NAME, message);
-        eventPublisher.publishEvent(kafkaMessage);
+        Optional.ofNullable(Utils.STREAMING_KEY)
+                .ifPresentOrElse(__ -> {
+                    String key = (message.get(Utils.STREAMING_KEY).asText() == null)
+                            ? String.valueOf(1000)
+                            : message.get(Utils.STREAMING_KEY).asText();
+
+                        KafkaMessageWithKey<JsonNode> kafkaMessage =
+                                new KafkaMessageWithKey<>(key, Utils.TABLE_NAME, message);
+                        eventPublisher.publishEvent(kafkaMessage);
+
+                }, () -> {
+                    KafkaMessage<JsonNode> kafkaMessage =
+                            new KafkaMessage<>(Utils.TABLE_NAME, message);
+                    eventPublisher.publishEvent(kafkaMessage);
+                });
     }
 
     public void sendBatch(Optional<Integer> amount) {

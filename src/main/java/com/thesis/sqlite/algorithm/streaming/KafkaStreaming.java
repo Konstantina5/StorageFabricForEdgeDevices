@@ -47,7 +47,7 @@ public class KafkaStreaming {
     }
 
     public CompletableFuture<List<ResponseEntity<Void>>> sendDataForAllTablesInTheQuery(String query, Integer dataAmount) {
-        Set<String> tables = getTableMap(query);
+        Set<String> tables = getJoinTables(query);
 
         boolean b = tables.stream()
 //                .filter(key -> !key.equals(Utils.TABLE_NAME)) TODO k: uncomment when QueryHandler is ready
@@ -74,7 +74,11 @@ public class KafkaStreaming {
     public CompletableFuture<ExecuteStatementResult> createQueryTable(QueryTable queryTable) {
         return  client.executeStatement(String.format("DROP TABLE IF EXISTS %s;", queryTable.getTableName()))
                 .thenCompose(__ -> client.executeStatement(String.format("""
-                    CREATE TABLE %s AS %s
+                    CREATE TABLE %s WITH (
+                        VALUE_FORMAT='JSON',
+                        PARTITIONS=1,
+                        REPLICAS=1
+                      ) AS %s
                     """, queryTable.getTableName(), queryTable.getQuery())));
     }
 
@@ -90,34 +94,26 @@ public class KafkaStreaming {
                 });
     }
 
-    private static Set<String> getTableMap(String query) {
-        String lower = query.toLowerCase();
+    private static Set<String> getJoinTables(String query) {
+        Set<String> tables = new HashSet<>();
+        String lowerQuery = query.toLowerCase();
 
-        int fromIdx = lower.indexOf("from");
-        if (fromIdx == -1) {
-            return Set.of();
+        int joinIdx = lowerQuery.indexOf("join");
+        while (joinIdx != -1) {
+            int start = joinIdx + 4; // skip "join"
+            int end = lowerQuery.indexOf("on", start); // assume "ON" follows the table
+            if (end == -1) {
+                end = query.length();
+            }
+            String joinPart = query.substring(start, end).trim();
+            String joinTable = joinPart.split("\\s+")[0]; // take only table name
+            if (!joinTable.isEmpty()) {
+                tables.add(joinTable);
+            }
+            joinIdx = lowerQuery.indexOf("join", joinIdx + 4);
         }
 
-        int whereIdx = lower.indexOf("where", fromIdx);
-        int groupByIdx = lower.indexOf("group by", fromIdx);
-
-        int endIdx;
-        if (whereIdx != -1 && groupByIdx != -1) {
-            endIdx = Math.min(whereIdx, groupByIdx);
-        } else if (whereIdx != -1) {
-            endIdx = whereIdx;
-        } else if (groupByIdx != -1) {
-            endIdx = groupByIdx;
-        } else {
-            endIdx = query.length();
-        }
-
-        String aliases = query.substring(fromIdx + 4, endIdx).trim();
-        String[] aliasArr = aliases.split(",");
-
-        return Arrays.stream(aliasArr)
-                .map(String::trim)
-                .collect(Collectors.toSet());
+        return tables;
     }
 
 }
